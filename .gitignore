@@ -1,0 +1,6 @@
+# Docker environment variables, secrets 
+.env
+
+# Python files
+__pycache__/
+.pyc
