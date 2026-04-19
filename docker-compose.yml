@@ -1,49 +1,82 @@
 services:
   admin-gateway:
     build: ./admin-gateway
+    networks:
+      - gateway
+      - internal
     env_file: .env
     depends_on: [inventory-service, order-service]
 
   user-gateway:
     build: ./user-gateway
+    networks:
+      - gateway
+      - internal
     env_file: .env
-    depends_on: [order-service]
+    depends_on: [inventory-service, order-service]
 
   inventory-service:
     build: ./inventory-service
+    networks:
+      - internal
     env_file: .env
 
   order-service:
     build: ./order-service
+    networks:
+      - internal
     env_file: .env
-    environment:
-      - INVENTORY_URL=http://inventory-service:8000
 
   nginx:
     image: nginx:1.29.6-alpine
-    ports: ["8080:80"]
+    networks:
+      - public
+      - gateway
+    ports: ["8080:80", "443:443"]
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on: [admin-gateway, user-gateway]
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on: [admin-gateway, user-gateway, grafana, prometheus]
 
   db:
     image: postgres:18.3-alpine
+    networks:
+      - internal
     env_file: .env
-    ports: ["5432:5432"]
+    # ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   prometheus:
     image: prom/prometheus:v3
-    ports: ["9090:9090"]
+    networks:
+      - gateway
+      - internal
+    # ports: ["9090:9090"]
+    command:
+       - '--config.file=/etc/prometheus/prometheus.yml' # TEMP: won't be accessable through nginx in the future (only through grafana)
+       - --storage.tsdb.path=/prometheus
+       - --web.console.templates=/etc/prometheus/consoles
+       - --web.console.libraries=/etc/prometheus/console_libraries
+       - '--web.external-url=https://localhost/prometheus/'
+       - '--web.route-prefix=/'
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on: [admin-gateway, user-gateway, inventory-service, order-service]
 
   grafana:
     image: grafana/grafana:12.3
-    ports: ["3000:3000"]
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - gateway
+      - internal
+    # ports: ["3000:3000"]
+    env_file: .env
+    depends_on: [prometheus]
 
 volumes:
   pgdata:
+
+networks:
+  public:
+  gateway:
+  internal:
