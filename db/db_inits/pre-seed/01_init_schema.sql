@@ -12,7 +12,7 @@ CREATE TABLE users (
     username VARCHAR(80) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'employee')),
-    preferred_language VARCHAR(10) DEFAULT 'en' CHECK (preferred_language IN ('en', 'ru')), -- Поддержка нескольких языков
+    preferred_language VARCHAR(10) DEFAULT 'ru' CHECK (preferred_language IN ('ru', 'en')), -- Поддержка нескольких языков
     preferred_currency CHAR(3) NOT NULL REFERENCES currencies(code),
     preferred_shipment_method VARCHAR(50) DEFAULT 'standard' CHECK (preferred_shipment_method IN ('standard', 'express', 'pickup')),
     preferred_payment_method VARCHAR(50) DEFAULT 'card' CHECK (preferred_payment_method IN ('card', 'paypal', 'invoice')),
@@ -75,7 +75,7 @@ CREATE TABLE orders (
     tracking_number VARCHAR(100) UNIQUE,
     shipment_method VARCHAR(50) CHECK (shipment_method IN ('standard', 'express', 'pickup')),
     user_id INTEGER NOT NULL REFERENCES users(user_id),
-    status VARCHAR(20) DEFAULT 'new' CHECK (status IN ('new', 'processing', 'completed', 'cancelled')),
+    status VARCHAR(20) DEFAULT 'created' CHECK (status IN ('created', 'payed', 'processing', 'completed', 'cancelled')),
     total_amount_in_base NUMERIC(12,2),
     order_currency CHAR(3) NOT NULL REFERENCES currencies(code), -- Валюта, в которой был оформлен заказ
     exchange_rate_at_purchase NUMERIC(12,6) NOT NULL, -- Курс валюты на момент покупки, для корректного расчёта в случае изменения курсов (в случае покупки не в базовой валюте)

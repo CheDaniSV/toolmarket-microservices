@@ -71,12 +71,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Обновляем один раз в ручную
-SELECT update_currency_rates();
-
 -- Планируем выполнение функции каждый час
 SELECT cron.schedule(
     'update-currency-rates',      -- Уникальное имя задания
     '0 * * * *',                  -- Cron-выражение: каждый час в 0 минут
     'SELECT update_currency_rates();'
 );
+
+-- Обновляем один раз в ручную
+SELECT update_currency_rates();

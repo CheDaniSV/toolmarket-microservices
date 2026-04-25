@@ -5,7 +5,7 @@ services:
       - gateway
       - internal
     env_file: .env
-    depends_on: [inventory-service, order-service]
+    depends_on: [api]
 
   user-gateway:
     build: ./user-gateway
@@ -13,19 +13,7 @@ services:
       - gateway
       - internal
     env_file: .env
-    depends_on: [inventory-service, order-service]
-
-  inventory-service:
-    build: ./inventory-service
-    networks:
-      - internal
-    env_file: .env
-
-  order-service:
-    build: ./order-service
-    networks:
-      - internal
-    env_file: .env
+    depends_on: [api]
 
   nginx:
     image: nginx:1.29.6-alpine
@@ -52,6 +40,16 @@ services:
       - ./db/db_inits/pre-seed:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
+  api:
+    build: ./api
+    networks:
+      - internal
+    ports:
+      - "5001:8000"
+    depends_on: [db]
+    env_file: .env
+    restart: on-failure
+
   prometheus:
     image: prom/prometheus:v3
     networks:
@@ -67,7 +65,7 @@ services:
        - '--web.route-prefix=/'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on: [admin-gateway, user-gateway, inventory-service, order-service]
+    depends_on: [admin-gateway, user-gateway, api]
 
   grafana:
     image: grafana/grafana:12.3
