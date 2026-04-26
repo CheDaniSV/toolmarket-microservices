@@ -65,7 +65,7 @@ services:
        - '--web.route-prefix=/'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on: [employee-gateway, user-gateway, api]
+    depends_on: [employee-gateway, user-gateway, api, db]
 
   grafana:
     image: grafana/grafana:12.3
