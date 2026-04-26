@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toolmarket Admin</title>
+  <link rel="stylesheet" href="./static/style.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">Toolmarket Admin</div>
+      <button id="logoutBtn" class="secondary-button" hidden>Выйти</button>
+    </header>
+
+    <main>
+      <section id="loginSection" class="card">
+        <h1>Вход для сотрудника</h1>
+        <form id="loginForm">
+          <label>Логин</label>
+          <input id="username" type="text" autocomplete="username" required />
+          <label>Пароль</label>
+          <input id="password" type="password" autocomplete="current-password" required />
+          <button type="submit" class="primary-button">Войти</button>
+        </form>
+        <div id="loginError" class="error-message"></div>
+      </section>
+
+      <section id="appSection" hidden>
+        <div class="tabs">
+          <button data-tab="products" class="tab-button active">Товары</button>
+          <button data-tab="categories" class="tab-button">Категории</button>
+          <button data-tab="orders" class="tab-button">Заказы</button>
+        </div>
+
+        <div id="productsTab" class="tab-panel">
+          <div class="panel-header">
+            <h2>Товары</h2>
+            <button id="refreshProducts" class="secondary-button">Обновить</button>
+          </div>
+          <div class="grid-two">
+            <div class="panel-card">
+              <h3>Форма товара</h3>
+              <form id="productForm">
+                <input type="hidden" id="productId" />
+                <label>SKU</label>
+                <input id="productSku" required />
+                <label>Название</label>
+                <input id="productName" required />
+                <label>Описание</label>
+                <textarea id="productDescription"></textarea>
+                <label>Цена, базовая</label>
+                <input id="productPrice" type="number" min="0.01" step="0.01" required />
+                <label>Склад</label>
+                <input id="productStock" type="number" min="0" step="1" required />
+                <label>Категория</label>
+                <select id="productCategory"></select>
+                <div class="form-actions">
+                  <button type="submit" class="primary-button">Сохранить</button>
+                  <button id="resetProduct" type="button" class="secondary-button">Сброс</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel-card">
+              <h3>Подробности товара</h3>
+              <div id="productDetailsPlaceholder">Выберите товар из списка, чтобы просмотреть атрибуты и изображения.</div>
+              <div id="productDetails" hidden>
+                <div class="details-row">
+                  <div>
+                    <strong>ID:</strong> <span id="detailProductId"></span>
+                  </div>
+                  <div>
+                    <strong>SKU:</strong> <span id="detailProductSku"></span>
+                  </div>
+                </div>
+                <div class="details-row">
+                  <div><strong>Название:</strong> <span id="detailProductName"></span></div>
+                  <div><strong>Категория:</strong> <span id="detailProductCategory"></span></div>
+                </div>
+                <div class="details-row">
+                  <div><strong>Цена:</strong> <span id="detailProductPrice"></span></div>
+                  <div><strong>Склад:</strong> <span id="detailProductStock"></span></div>
+                </div>
+                <section class="subpanel">
+                  <h4>Атрибуты</h4>
+                  <div id="productAttributesList" class="compact-list"></div>
+                  <form id="attributeForm" class="compact-form">
+                    <input id="attributeName" placeholder="Имя атрибута" required />
+                    <input id="attributeValue" placeholder="Значение" required />
+                    <button type="submit" class="primary-button">Добавить</button>
+                  </form>
+                </section>
+                <section class="subpanel">
+                  <h4>Изображения</h4>
+                  <div id="productImagesList" class="compact-list"></div>
+                  <form id="imageForm" class="compact-form">
+                    <label>Файл изображения</label>
+                    <input id="imageFile" type="file" accept="image/*" required />
+                    <label>Порядок</label>
+                    <input id="imageOrder" type="number" placeholder="Порядок" value="0" />
+                    <button type="submit" class="primary-button">Добавить</button>
+                  </form>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="panel-card">
+            <h3>Список товаров</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>SKU</th>
+                  <th>Название</th>
+                  <th>Цена</th>
+                  <th>Склад</th>
+                  <th>Категория</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="productsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="categoriesTab" class="tab-panel hidden">
+          <div class="panel-header">
+            <h2>Категории</h2>
+            <button id="refreshCategories" class="secondary-button">Обновить</button>
+          </div>
+          <div class="grid-two">
+            <div class="panel-card">
+              <h3>Форма категории</h3>
+              <form id="categoryForm">
+                <input type="hidden" id="categoryId" />
+                <label>Название</label>
+                <input id="categoryName" required />
+                <label>Родительская категория</label>
+                <select id="categoryParent">
+                  <option value="">Без родителя</option>
+                </select>
+                <div class="form-actions">
+                  <button type="submit" class="primary-button">Сохранить</button>
+                  <button id="resetCategory" type="button" class="secondary-button">Сброс</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel-card">
+              <h3>Список категорий</h3>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Родитель</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="categoriesTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="ordersTab" class="tab-panel hidden">
+          <div class="panel-header">
+            <h2>Заказы</h2>
+            <div class="toolbar">
+              <label>Статус</label>
+              <select id="orderStatusFilter">
+                <option value="">Все</option>
+                <option value="created">created</option>
+                <option value="payed">payed</option>
+                <option value="processing">processing</option>
+                <option value="completed">completed</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+              <label>Сортировка</label>
+              <select id="orderSortBy">
+                <option value="date">По дате</option>
+                <option value="client">По клиенту</option>
+                <option value="product">По товару</option>
+              </select>
+              <button id="refreshOrders" class="secondary-button">Обновить</button>
+            </div>
+          </div>
+          <div class="panel-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Клиент</th>
+                  <th>Статус</th>
+                  <th>Сумма</th>
+                  <th>Дата</th>
+                  <th>Товары</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./static/app.js"></script>
+</body>
+</html>

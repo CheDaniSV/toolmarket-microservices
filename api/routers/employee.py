@@ -1,6 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from hashlib import sha256
+import secrets
+import time
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from typing import List, Optional
 
 from ..database import get_db
 from ..models import (
@@ -195,27 +201,47 @@ async def delete_product(
     await db.delete(existing)
     await db.commit()
 
-@router.post("/product_images", response_model=ProductImageOut)
-async def create_product_image(
-    image: ProductImageCreate,
+IMAGE_ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets" / "product_images"
+IMAGE_ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.post("/products/{product_id}/images", response_model=ProductImageOut)
+async def upload_product_image(
+    product_id: int,
+    file: UploadFile = File(...),
+    image_order: int = 0,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
-    new_image = ProductImage(**image.model_dump())
+    product = await db.get(Product, product_id)
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    filename = Path(file.filename).name
+    suffix = Path(filename).suffix or ".jpg"
+    unique_hash = sha256(secrets.token_bytes(16) + filename.encode() + str(time.time()).encode()).hexdigest()
+    saved_filename = f"{unique_hash}{suffix}"
+    file_path = IMAGE_ASSETS_DIR / saved_filename
+
+    content = await file.read()
+    file_path.write_bytes(content)
+
+    image_url = f"/assets/product_images/{saved_filename}"
+    new_image = ProductImage(product_id=product_id, image_url=image_url, image_order=image_order)
     db.add(new_image)
     await db.commit()
     await db.refresh(new_image)
     return new_image
 
-@router.put("/product_images/{image_id}", response_model=ProductImageOut)
+@router.put("/products/{product_id}/images/{image_id}", response_model=ProductImageOut)
 async def update_product_image(
+    product_id: int,
     image_id: int,
     image: ProductImageUpdate,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
     existing = await db.get(ProductImage, image_id)
-    if existing is None:
+    if existing is None or existing.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product image not found")
     for field, value in image.model_dump(exclude_unset=True).items():
         setattr(existing, field, value)
@@ -223,27 +249,32 @@ async def update_product_image(
     await db.refresh(existing)
     return existing
 
-@router.delete("/product_images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{product_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product_image(
+    product_id: int,
     image_id: int,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
     existing = await db.get(ProductImage, image_id)
-    if existing is None:
+    if existing is None or existing.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product image not found")
     await db.delete(existing)
     await db.commit()
 
-@router.post("/product_attributes", response_model=ProductAttributeOut)
+@router.post("/products/{product_id}/attributes", response_model=ProductAttributeOut)
 async def create_product_attribute(
+    product_id: int,
     attribute: ProductAttributeCreate,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
+    if product_id != attribute.product_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product ID mismatch")
+
     existing = await db.execute(
         select(ProductAttribute).where(
-            ProductAttribute.product_id == attribute.product_id,
+            ProductAttribute.product_id == product_id,
             ProductAttribute.attr_name == attribute.attr_name,
         )
     )
@@ -255,15 +286,16 @@ async def create_product_attribute(
     await db.refresh(new_attribute)
     return new_attribute
 
-@router.put("/product_attributes/{attribute_id}", response_model=ProductAttributeOut)
+@router.put("/products/{product_id}/attributes/{attribute_id}", response_model=ProductAttributeOut)
 async def update_product_attribute(
+    product_id: int,
     attribute_id: int,
     attribute: ProductAttributeUpdate,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
     existing = await db.get(ProductAttribute, attribute_id)
-    if existing is None:
+    if existing is None or existing.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product attribute not found")
     for field, value in attribute.model_dump(exclude_unset=True).items():
         setattr(existing, field, value)
@@ -271,14 +303,15 @@ async def update_product_attribute(
     await db.refresh(existing)
     return existing
 
-@router.delete("/product_attributes/{attribute_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{product_id}/attributes/{attribute_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product_attribute(
+    product_id: int,
     attribute_id: int,
     db: AsyncSession = Depends(get_db),
     _: object = Depends(role_required(["employee"])),
 ):
     existing = await db.get(ProductAttribute, attribute_id)
-    if existing is None:
+    if existing is None or existing.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product attribute not found")
     await db.delete(existing)
     await db.commit()

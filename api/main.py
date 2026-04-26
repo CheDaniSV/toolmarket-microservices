@@ -1,7 +1,9 @@
+from pathlib import Path
 from time import perf_counter
 
 from fastapi import FastAPI, Depends, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter, Gauge, Histogram, CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, func
@@ -33,7 +35,12 @@ async def lifespan(app: FastAPI):
         )
     yield
 
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+PRODUCT_IMAGE_DIR = ASSETS_DIR / "product_images"
+PRODUCT_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION, lifespan=lifespan)
+app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
 HTTP_REQUESTS = Counter(
     "toolmarket_http_requests_total",

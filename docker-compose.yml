@@ -24,6 +24,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - assets_data:/assets:ro
     depends_on: [employee-gateway, user-gateway, grafana, prometheus]
 
   db:
@@ -48,6 +49,8 @@ services:
     ports: ["5001:8000"]
     depends_on: [db]
     env_file: .env
+    volumes:
+      - assets_data:/app/assets
     restart: on-failure
 
   prometheus:
@@ -78,6 +81,7 @@ services:
 
 volumes:
   postgres_data:
+  assets_data:
 
 networks:
   public:
