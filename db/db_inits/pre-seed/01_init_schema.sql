@@ -62,7 +62,7 @@ CREATE TABLE product_attributes (
 CREATE TABLE product_images (
     image_id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     product_id INTEGER NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
-    image_url VARCHAR(255) NOT NULL,
+    image_url VARCHAR(255) NOT NULL, -- URL-адрес картинки, может быть локальным (например, /images/product123.jpg) или внешним (https://example.com/image.jpg)
     image_order INTEGER DEFAULT 0, -- Порядок отображения картинок для одного товара,
     CONSTRAINT unique_image_order_per_product UNIQUE (product_id, image_order)
 );

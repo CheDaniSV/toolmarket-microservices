@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from contextlib import asynccontextmanager
 
 from .config import settings
@@ -10,12 +10,22 @@ from .models import User, Currency
 from .auth import create_access_token, get_password_hash, verify_password
 from .dependencies import get_current_user
 from .schemas import Token, UserLogin, UserRegister, UserOut
-from .routers import admin, employee, public, customer
+from .routers import employee, public, customer
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            text(
+                "ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('created', 'payed', 'processing', 'completed', 'cancelled'))"
+            )
+        )
     yield
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION, lifespan=lifespan)
@@ -31,7 +41,6 @@ app.add_middleware(
 # Подключаем роутеры
 app.include_router(public.router, prefix="/api/v1")
 app.include_router(customer.router, prefix="/api/v1")
-app.include_router(admin.router, prefix="/api/v1")
 app.include_router(employee.router, prefix="/api/v1")
 
 @app.post("/api/v1/auth/login", response_model=Token)

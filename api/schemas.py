@@ -187,7 +187,7 @@ class OrderItemOut(BaseModel):
 
 class OrderCreate(BaseModel):
     shipping_address_id: int
-    billing_address_id: int
+    billing_address_id: Optional[int] = None
     shipment_method: str = "standard"
 
 class OrderStatusUpdate(BaseModel):

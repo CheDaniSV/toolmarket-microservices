@@ -60,6 +60,22 @@ async def _build_order_dict(order: Order, items: list[OrderItem]) -> dict:
         ],
     }
 
+async def _ensure_stock_for_order(order: Order, db: AsyncSession) -> None:
+    item_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.order_id))
+    items = item_result.scalars().all()
+    for item in items:
+        product = await db.get(Product, item.product_id)
+        if product is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product {item.product_id} not found")
+        if item.quantity > product.stock:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Not enough stock for product {product.product_id}. Available: {product.stock}, requested: {item.quantity}",
+            )
+    for item in items:
+        product = await db.get(Product, item.product_id)
+        product.stock -= item.quantity
+
 @router.post("/categories", response_model=CategoryOut)
 async def create_category(
     category: CategoryCreate,
@@ -307,7 +323,20 @@ async def update_order_status(
     order = await db.get(Order, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    valid_statuses = {"created", "payed", "processing", "completed", "cancelled"}
+    if status_update.status not in valid_statuses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order status")
+
+    should_decrement_stock = (
+        status_update.status in {"processing", "completed"}
+        and order.status == "created"
+    )
+    if should_decrement_stock:
+        await _ensure_stock_for_order(order, db)
+
     order.status = status_update.status
+    db.add(order)
     await db.commit()
     await db.refresh(order)
     item_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.order_id))

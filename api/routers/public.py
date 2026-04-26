@@ -4,8 +4,8 @@ from sqlalchemy import select, or_
 from typing import List, Optional
 
 from ..database import get_db
-from ..models import Product, Currency, Category, Review, ExchangeRate
-from ..schemas import ProductOut, CategoryOut, CurrencyOut, ReviewOut, ExchangeRateOut
+from ..models import Product, Currency, Category, Review, ExchangeRate, ProductAttribute
+from ..schemas import ProductOut, CategoryOut, CurrencyOut, ReviewOut, ExchangeRateOut, ProductAttributeOut
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -60,6 +60,17 @@ async def list_exchange_rates(
     if active:
         query = query.where(ExchangeRate.valid_until.is_(None))
     result = await db.execute(query.order_by(ExchangeRate.valid_from.desc()))
+    return result.scalars().all()
+
+@router.get("/product_attributes", response_model=List[ProductAttributeOut])
+async def list_product_attributes(
+    product_id: Optional[int] = Query(None, ge=1),
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(ProductAttribute)
+    if product_id is not None:
+        query = query.where(ProductAttribute.product_id == product_id)
+    result = await db.execute(query)
     return result.scalars().all()
 
 @router.get("/products/{product_id}/reviews", response_model=List[ReviewOut])

@@ -1,0 +1,8 @@
+fastapi==0.136.0
+uvicorn[standard]==0.46.0   # последняя стабильная (можете оставить 0.24.0, но лучше обновить)
+httpx==0.28.1               # асинхронный HTTP-клиент для запросов к API
+python-dotenv==1.2.2
+python-multipart==0.0.20    # для обработки форм (логин, регистрация, фильтры)
+Jinja2==3.1.6               # шаблонизатор (ставится с FastAPI, но лучше зафиксировать)
+prometheus-fastapi-instrumentator==7.1.0  # метрики для Prometheus
+python-jose[cryptography]==3.5.0          # если нужно проверять JWT на стороне gateway

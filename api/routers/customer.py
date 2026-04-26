@@ -61,6 +61,22 @@ async def _get_order_items(db: AsyncSession, order_id: int) -> list[OrderItem]:
     result = await db.execute(select(OrderItem).where(OrderItem.order_id == order_id))
     return result.scalars().all()
 
+async def _ensure_stock_for_order(order: Order, db: AsyncSession) -> None:
+    item_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.order_id))
+    items = item_result.scalars().all()
+    for item in items:
+        product = await db.get(Product, item.product_id)
+        if product is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product {item.product_id} not found")
+        if item.quantity > product.stock:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Not enough stock for product {product.product_id}. Available: {product.stock}, requested: {item.quantity}",
+            )
+    for item in items:
+        product = await db.get(Product, item.product_id)
+        product.stock -= item.quantity
+
 @router.get("/orders", response_model=list[OrderOut])
 async def get_my_orders(
     current_user: User = Depends(role_required(["customer", "employee"])),
@@ -187,14 +203,16 @@ async def create_order(
     if not cart_items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
 
+    billing_address_id = order_data.billing_address_id or order_data.shipping_address_id
+    address_ids = {order_data.shipping_address_id, billing_address_id}
     address_result = await db.execute(
         select(UserAddress).where(
-            UserAddress.address_id.in_([order_data.shipping_address_id, order_data.billing_address_id]),
+            UserAddress.address_id.in_(list(address_ids)),
             UserAddress.user_id == current_user.user_id,
         )
     )
     valid_addresses = address_result.scalars().all()
-    if len(valid_addresses) < 2:
+    if len(valid_addresses) < len(address_ids):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Shipping or billing address is invalid")
 
     base_currency_result = await db.execute(select(Currency).where(Currency.is_base == True))
@@ -208,6 +226,11 @@ async def create_order(
         product = await db.get(Product, cart_item.product_id)
         if product is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product {cart_item.product_id} not found")
+        if cart_item.quantity > product.stock:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Not enough stock for product {product.product_id}. Available: {product.stock}, requested: {cart_item.quantity}",
+            )
         total_amount_in_base += Decimal(product.base_price) * cart_item.quantity
         order_items.append((cart_item, product))
 
@@ -231,7 +254,7 @@ async def create_order(
 
     new_order = Order(
         shipping_address_id=order_data.shipping_address_id,
-        billing_address_id=order_data.billing_address_id,
+        billing_address_id=billing_address_id,
         shipment_method=order_data.shipment_method,
         user_id=current_user.user_id,
         status="created",
@@ -309,6 +332,14 @@ async def create_payment(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exchange rate for this order is not available")
         amount_in_base = Decimal(payment_data.amount) / Decimal(order.exchange_rate_at_purchase)
 
+    if amount_in_base != Decimal(order.total_amount_in_base):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment amount does not match order total",
+        )
+
+    await _ensure_stock_for_order(order, db)
+
     new_payment = Payment(
         order_id=order.order_id,
         amount=payment_data.amount,
@@ -318,6 +349,7 @@ async def create_payment(
     )
     order.status = "payed"
     db.add(new_payment)
+    db.add(order)
     await db.commit()
     await db.refresh(new_payment)
     await db.refresh(order)
