@@ -9,8 +9,16 @@
 <body>
   <div class="page-shell">
     <header class="topbar">
-      <div class="brand">Toolmarket Admin</div>
-      <button id="logoutBtn" class="secondary-button" hidden>Выйти</button>
+      <div class="topbar-brand">
+        <div class="brand">Toolmarket Admin</div>
+        <div id="currencyRates" class="currency-rates">Курс: загружается...</div>
+      </div>
+      <div class="topbar-actions">
+        <a href="/grafana" target="_blank" id="grafana-button" class="secondary-button">Grafana</a>
+        <a href="/market" target="_blank" id="market-button" class="secondary-button">Market</a>
+        <button id="themeToggleBtn" class="secondary-button">Светлая тема</button>
+        <button id="logoutBtn" class="secondary-button" hidden>Выйти</button>
+      </div>
     </header>
 
     <main>
@@ -34,8 +42,16 @@
         </div>
 
         <div id="productsTab" class="tab-panel">
-          <div class="panel-header">
+          <div class="panel-header panel-header-multiline">
             <h2>Товары</h2>
+            <div class="toolbar">
+              <input id="productSearch" type="search" placeholder="Поиск по названию и описанию" />
+              <select id="productCategoryFilter">
+                <option value="">Все категории</option>
+              </select>
+              <button id="productSearchBtn" class="secondary-button">Найти</button>
+              <button id="productResetFilters" class="secondary-button">Сброс</button>
+            </div>
             <button id="refreshProducts" class="secondary-button">Обновить</button>
           </div>
           <div class="grid-two">
@@ -47,14 +63,14 @@
                 <input id="productSku" required />
                 <label>Название</label>
                 <input id="productName" required />
-                <label>Описание</label>
-                <textarea id="productDescription"></textarea>
-                <label>Цена, базовая</label>
+                <label>Цена, руб. </label>
                 <input id="productPrice" type="number" min="0.01" step="0.01" required />
-                <label>Склад</label>
+                <label>Количество на складе</label>
                 <input id="productStock" type="number" min="0" step="1" required />
                 <label>Категория</label>
                 <select id="productCategory"></select>
+                <label>Описание</label>
+                <textarea id="productDescription"></textarea>
                 <div class="form-actions">
                   <button type="submit" class="primary-button">Сохранить</button>
                   <button id="resetProduct" type="button" class="secondary-button">Сброс</button>
@@ -101,6 +117,13 @@
                     <button type="submit" class="primary-button">Добавить</button>
                   </form>
                 </section>
+                <section class="subpanel">
+                  <h4>Отзывы</h4>
+                  <div id="productReviewsPlaceholder">Выберите товар, чтобы увидеть отзывы.</div>
+                  <div id="productReviewsPanel" hidden>
+                    <div id="productReviewsList" class="compact-list"></div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -120,6 +143,11 @@
               </thead>
               <tbody id="productsTable"></tbody>
             </table>
+            <div class="pagination-bar">
+              <button id="productPrevPage" class="secondary-button">Пред.</button>
+              <span id="productPageInfo">Страница 1</span>
+              <button id="productNextPage" class="secondary-button">След.</button>
+            </div>
           </div>
         </div>
 

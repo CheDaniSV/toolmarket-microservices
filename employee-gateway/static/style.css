@@ -1,8 +1,36 @@
 :root {
-  color-scheme: dark;
+  --bg: #0f172a;
+  --surface: #111827;
+  --surface-2: #1f2937;
+  --surface-3: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #2563eb;
+  --accent: #60a5fa;
+  --danger: #f87171;
+  --grafana: #ff8f00e8;
   font-family: Inter, system-ui, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --text: #0f172a;
+  --muted: #475569;
+  --border: #cbd5e1;
+  --primary: #2563eb;
+  --accent: #93c5fd;
+  --danger: #ef4444;
+  --grafana: #ff8f00e8;
+  color-scheme: light;
+  background: var(--bg);
+  color: var(--text);
 }
 
 * {
@@ -12,6 +40,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .page-shell {
@@ -25,6 +55,20 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.topbar-brand,
+.topbar-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.currency-rates {
+  font-size: 0.95rem;
+  color: var(--muted);
 }
 
 .brand {
@@ -39,59 +83,99 @@ body {
 }
 
 .tab-button {
-  border: 1px solid #334155;
-  background: #1e293b;
-  color: #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
   padding: 10px 16px;
   cursor: pointer;
   border-radius: 8px;
 }
 
-.tab-button.active,
 .tab-button:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .card,
 .panel-card {
-  background: #111827;
-  border: 1px solid #334155;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
 }
 
-button {
+button,
+a.secondary-button,
+a.primary-button {
   border: none;
   border-radius: 10px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background-color 160ms ease, transform 160ms ease, opacity 160ms ease;
 }
 
 .primary-button,
-.secondary-button {
+.secondary-button,
+a.secondary-button,
+a.primary-button {
   padding: 10px 16px;
   font-weight: 600;
 }
 
-.primary-button {
-  background: #2563eb;
+.primary-button,
+.tab-button.active,
+a.primary-button {
+  background: var(--primary);
   color: white;
 }
 
+.secondary-button,
+a.secondary-button {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+a.secondary-button,
+a.primary-button,
+.primary-button,
+.tab-button.active,
 .secondary-button {
-  background: #1f2937;
-  color: #e2e8f0;
+  border: 1px solid var(--border);
+}
+
+button:hover,
+a.secondary-button:hover,
+a.primary-button:hover,
+.primary-button:hover,
+.secondary-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+#grafana-button {
+  background-color: var(--grafana);
+}
+
+#market-button {
+  background-color: var(--primary);
+}
+
+a.secondary-button {
+  font-size: 14px;
 }
 
 input,
 select,
 textarea {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   width: 100%;
   border-radius: 10px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #e2e8f0;
   padding: 10px;
   margin-top: 8px;
   margin-bottom: 16px;
@@ -115,13 +199,13 @@ label {
 
 .data-table th,
 .data-table td {
-  border: 1px solid #334155;
+  border: 1px solid var(--border);
   padding: 12px;
   text-align: left;
 }
 
 .data-table th {
-  background: #111827;
+  background: var(--surface);
 }
 
 .data-table tbody tr:hover {
@@ -175,6 +259,24 @@ label {
   gap: 12px;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.panel-header-multiline .toolbar {
+  flex: 1;
+  min-width: 280px;
+}
+
+.toolbar input,
+.toolbar select {
+  max-width: 220px;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .grid-two {

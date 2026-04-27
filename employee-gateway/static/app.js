@@ -5,6 +5,10 @@ let categories = [];
 let orders = [];
 let selectedProductId = null;
 let editingCategoryId = null;
+let productPage = 0;
+const PRODUCTS_PER_PAGE = 10;
+let productHasMore = false;
+let currentTheme = localStorage.getItem("toolmarket_theme") || "dark";
 
 const elements = {
   loginSection: document.getElementById("loginSection"),
@@ -26,8 +30,20 @@ const elements = {
   categoryForm: document.getElementById("categoryForm"),
   productCategory: document.getElementById("productCategory"),
   categoryParent: document.getElementById("categoryParent"),
+  productCategoryFilter: document.getElementById("productCategoryFilter"),
+  productSearch: document.getElementById("productSearch"),
+  productSearchBtn: document.getElementById("productSearchBtn"),
+  productResetFilters: document.getElementById("productResetFilters"),
+  productPrevPage: document.getElementById("productPrevPage"),
+  productNextPage: document.getElementById("productNextPage"),
+  productPageInfo: document.getElementById("productPageInfo"),
   productDetails: document.getElementById("productDetails"),
   productDetailsPlaceholder: document.getElementById("productDetailsPlaceholder"),
+  productReviewsPanel: document.getElementById("productReviewsPanel"),
+  productReviewsList: document.getElementById("productReviewsList"),
+  productReviewsPlaceholder: document.getElementById("productReviewsPlaceholder"),
+  currencyRates: document.getElementById("currencyRates"),
+  themeToggleBtn: document.getElementById("themeToggleBtn"),
   detailProductId: document.getElementById("detailProductId"),
   detailProductSku: document.getElementById("detailProductSku"),
   detailProductName: document.getElementById("detailProductName"),
@@ -52,9 +68,9 @@ function showApp() {
   elements.logoutBtn.hidden = false;
 }
 
-function getAuthHeaders(isForm = false) {
+function getAuthHeaders(isForm = false, options = {}) {
   const headers = {};
-  if (!isForm) {
+  if (!isForm && options.method !== "GET" && options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
   if (token) {
@@ -63,9 +79,40 @@ function getAuthHeaders(isForm = false) {
   return headers;
 }
 
+function applyTheme() {
+  document.documentElement.dataset.theme = currentTheme;
+  if (elements.themeToggleBtn) {
+    elements.themeToggleBtn.textContent = currentTheme === "light" ? "Тёмная тема" : "Светлая тема";
+  }
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === "light" ? "dark" : "light";
+  localStorage.setItem("toolmarket_theme", currentTheme);
+  applyTheme();
+}
+
+async function loadExchangeRates() {
+  if (!elements.currencyRates) {
+    return;
+  }
+  try {
+    const [eurRates, usdRates] = await Promise.all([
+      request("public/exchange-rates?from_currency=RUB&to_currency=EUR", { method: "GET" }),
+      request("public/exchange-rates?from_currency=RUB&to_currency=USD", { method: "GET" }),
+    ]);
+    const eur = 1 / eurRates[0]?.rate ?? null;
+    const usd = 1 / usdRates[0]?.rate ?? null;
+    elements.currencyRates.textContent = `EUR: ${eur ? eur.toFixed(2) : "N/A"} USD: ${usd ? usd.toFixed(2) : "N/A"}`;
+  } catch (error) {
+    elements.currencyRates.textContent = "Не удалось загрузить курс валют";
+    console.warn("Не удалось загрузить курсы валют", error);
+  }
+}
+
 async function request(path, options = {}) {
   const isForm = options.body instanceof FormData;
-  const headers = { ...(options.headers || {}), ...getAuthHeaders(isForm) };
+  const headers = { ...(options.headers || {}), ...getAuthHeaders(isForm, options) };
   const response = await fetch(`${API_PREFIX}/${path}`, {
     ...options,
     headers,
@@ -133,6 +180,91 @@ function getCategoryName(categoryId) {
   return category ? category.name : "-";
 }
 
+function updateProductPagination() {
+  elements.productPageInfo.textContent = `Страница ${productPage + 1}`;
+  elements.productPrevPage.disabled = productPage === 0;
+  elements.productNextPage.disabled = !productHasMore;
+}
+
+function buildProductQueryParams(page = 0) {
+  const params = new URLSearchParams();
+  const search = elements.productSearch.value.trim();
+  const categoryId = elements.productCategoryFilter.value;
+  const skip = page * PRODUCTS_PER_PAGE;
+  params.set("skip", String(skip));
+  params.set("limit", String(PRODUCTS_PER_PAGE + 1));
+  if (search) params.set("search", search);
+  if (categoryId) params.set("category_id", categoryId);
+  return params.toString();
+}
+
+async function loadProducts(page = 0) {
+  productPage = page;
+  const params = buildProductQueryParams(page);
+  products = await request(`public/products?${params}`);
+  productHasMore = products.length > PRODUCTS_PER_PAGE;
+  if (productHasMore) {
+    products = products.slice(0, PRODUCTS_PER_PAGE);
+  }
+  renderProducts();
+}
+
+function renderProducts() {
+  elements.productsTable.innerHTML = "";
+  products.forEach((product) => {
+    const row = document.createElement("tr");
+    row.className = "products-row";
+    row.dataset.id = product.product_id;
+    row.innerHTML = `
+      <td>${product.product_id}</td>
+      <td>${product.sku}</td>
+      <td>${product.name}</td>
+      <td>${product.base_price.toFixed(2)}</td>
+      <td>${product.stock}</td>
+      <td>${getCategoryName(product.category_id)}</td>
+      <td class="actions-cell">
+        <button data-id="${product.product_id}" class="secondary-button edit-product">Ред.</button>
+        <button data-id="${product.product_id}" class="secondary-button delete-product">Удал.</button>
+      </td>
+    `;
+    elements.productsTable.appendChild(row);
+  });
+  updateProductPagination();
+}
+
+async function loadProductReviews(productId) {
+  const reviews = await request(`public/products/${productId}/reviews`);
+  elements.productReviewsList.innerHTML = "";
+  if (reviews.length === 0) {
+    elements.productReviewsList.textContent = "Нет отзывов.";
+  } else {
+    reviews.forEach((review) => {
+      const row = document.createElement("div");
+      row.className = "compact-row";
+      row.innerHTML = `
+        <div>
+          <strong>#${review.review_id}</strong> Пользователь ${review.user_id} • Оценка ${review.rating}
+          <div>${review.comment || "Без комментария."}</div>
+        </div>
+        <button data-id="${review.review_id}" class="secondary-button delete-review">Удалить</button>
+      `;
+      elements.productReviewsList.appendChild(row);
+    });
+  }
+  elements.productReviewsPlaceholder.hidden = true;
+  elements.productReviewsPanel.hidden = false;
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm("Удалить отзыв?")) return;
+  await request(`employee/reviews/${reviewId}`, {
+    method: "DELETE",
+  });
+  if (selectedProductId) {
+    await loadProductReviews(selectedProductId);
+  }
+}
+
 function formatDate(value) {
   return new Date(value).toLocaleString("ru-RU", { hour12: false });
 }
@@ -171,6 +303,7 @@ async function loadCategories() {
   categories = await request("public/categories");
   elements.categoryParent.innerHTML = `<option value="">Без родителя</option>`;
   elements.productCategory.innerHTML = `<option value="">Без категории</option>`;
+  elements.productCategoryFilter.innerHTML = `<option value="">Все категории</option>`;
   categories.forEach((category) => {
     const option = document.createElement("option");
     option.value = category.category_id;
@@ -179,6 +312,9 @@ async function loadCategories() {
 
     const productOption = option.cloneNode(true);
     elements.productCategory.appendChild(productOption);
+
+    const filterOption = option.cloneNode(true);
+    elements.productCategoryFilter.appendChild(filterOption);
   });
   renderCategories();
 }
@@ -481,10 +617,23 @@ function attachDelegatedEvents() {
     if (event.target.matches(".edit-product")) {
       const productId = Number(event.target.dataset.id);
       selectProduct(productId);
+      return;
     }
     if (event.target.matches(".delete-product")) {
       const productId = Number(event.target.dataset.id);
       await removeProduct(productId);
+      return;
+    }
+    if (event.target.matches(".delete-review")) {
+      const reviewId = Number(event.target.dataset.id);
+      await deleteReview(reviewId);
+      return;
+    }
+    if (event.target.closest("tr.products-row") && !event.target.matches("button") && !event.target.closest("button")) {
+      const row = event.target.closest("tr.products-row");
+      const productId = Number(row.dataset.id);
+      selectProduct(productId);
+      return;
     }
     if (event.target.matches(".edit-category")) {
       const categoryId = Number(event.target.dataset.id);
@@ -494,18 +643,22 @@ function attachDelegatedEvents() {
       document.getElementById("categoryId").value = category.category_id;
       document.getElementById("categoryName").value = category.name;
       document.getElementById("categoryParent").value = category.parent_category_id || "";
+      return;
     }
     if (event.target.matches(".delete-category")) {
       const categoryId = Number(event.target.dataset.id);
       await removeCategory(categoryId);
+      return;
     }
     if (event.target.matches(".delete-attribute")) {
       const attributeId = Number(event.target.dataset.id);
       await deleteAttribute(attributeId);
+      return;
     }
     if (event.target.matches(".delete-image")) {
       const imageId = Number(event.target.dataset.id);
       await deleteImage(imageId);
+      return;
     }
   });
 
@@ -518,25 +671,42 @@ function attachDelegatedEvents() {
 }
 
 function setupListeners() {
-  elements.loginForm.addEventListener("submit", login);
-  elements.logoutBtn.addEventListener("click", logout);
-  elements.tabs.forEach((button) => button.addEventListener("click", () => setActiveTab(button.dataset.tab)));
-  elements.refreshProducts.addEventListener("click", loadProducts);
-  elements.refreshCategories.addEventListener("click", loadCategories);
-  elements.refreshOrders.addEventListener("click", loadOrders);
-  elements.orderStatusFilter.addEventListener("change", loadOrders);
-  elements.orderSortBy.addEventListener("change", renderOrders);
-  elements.productForm.addEventListener("submit", saveProduct);
-  document.getElementById("resetProduct").addEventListener("click", resetProductForm);
-  elements.categoryForm.addEventListener("submit", saveCategory);
-  document.getElementById("resetCategory").addEventListener("click", resetCategoryForm);
-  elements.attributeForm.addEventListener("submit", saveAttribute);
-  elements.imageForm.addEventListener("submit", saveImage);
+  const bind = (element, event, handler) => {
+    if (element) {
+      element.addEventListener(event, handler);
+    }
+  };
+
+  bind(elements.loginForm, "submit", login);
+  bind(elements.logoutBtn, "click", logout);
+  elements.tabs.forEach((button) => bind(button, "click", () => setActiveTab(button.dataset.tab)));
+  bind(elements.refreshProducts, "click", () => loadProducts(productPage));
+  bind(elements.refreshCategories, "click", loadCategories);
+  bind(elements.refreshOrders, "click", loadOrders);
+  bind(elements.orderStatusFilter, "change", loadOrders);
+  bind(elements.orderSortBy, "change", renderOrders);
+  bind(elements.productForm, "submit", saveProduct);
+  bind(document.getElementById("resetProduct"), "click", resetProductForm);
+  bind(elements.categoryForm, "submit", saveCategory);
+  bind(document.getElementById("resetCategory"), "click", resetCategoryForm);
+  bind(elements.attributeForm, "submit", saveAttribute);
+  bind(elements.imageForm, "submit", saveImage);
+  bind(elements.productSearchBtn, "click", () => loadProducts(0));
+  bind(elements.productResetFilters, "click", () => {
+    if (elements.productSearch) elements.productSearch.value = "";
+    if (elements.productCategoryFilter) elements.productCategoryFilter.value = "";
+    loadProducts(0);
+  });
+  bind(elements.productPrevPage, "click", () => loadProducts(productPage - 1));
+  bind(elements.productNextPage, "click", () => loadProducts(productPage + 1));
+  bind(elements.themeToggleBtn, "click", toggleTheme);
 }
 
 async function init() {
   setupListeners();
   attachDelegatedEvents();
+  applyTheme();
+  await loadExchangeRates();
   if (token) {
     try {
       await initializeAdmin();

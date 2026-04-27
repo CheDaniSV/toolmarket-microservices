@@ -71,12 +71,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- https://github.com/citusdata/pg_cron
 -- Планируем выполнение функции каждый час
 SELECT cron.schedule(
     'update-currency-rates',      -- Уникальное имя задания
-    '0 * * * *',                  -- Cron-выражение: каждый час в 0 минут
+    '0/10 * * * *',                  -- Cron-выражение: каждый час в 0 минут
     'SELECT update_currency_rates();'
 );
+
+SELECT  cron.schedule('delete-job-run-details', '0 12 * * *', $$DELETE FROM cron.job_run_details WHERE end_time < now() - interval '7 days'$$);
 
 -- Обновляем один раз в ручную
 SELECT update_currency_rates();
