@@ -8,6 +8,12 @@ let editingCategoryId = null;
 let productPage = 0;
 const PRODUCTS_PER_PAGE = 10;
 let productHasMore = false;
+let categoryPage = 0;
+const CATEGORIES_PER_PAGE = 10;
+let categoryHasMore = false;
+let orderPage = 0;
+const ORDERS_PER_PAGE = 10;
+let orderHasMore = false;
 let currentTheme = localStorage.getItem("toolmarket_theme") || "dark";
 
 const elements = {
@@ -37,6 +43,17 @@ const elements = {
   productPrevPage: document.getElementById("productPrevPage"),
   productNextPage: document.getElementById("productNextPage"),
   productPageInfo: document.getElementById("productPageInfo"),
+  categorySearch: document.getElementById("categorySearch"),
+  categorySearchBtn: document.getElementById("categorySearchBtn"),
+  categorySortBy: document.getElementById("categorySortBy"),
+  categoryResetFilters: document.getElementById("categoryResetFilters"),
+  categoryPrevPage: document.getElementById("categoryPrevPage"),
+  categoryNextPage: document.getElementById("categoryNextPage"),
+  categoryPageInfo: document.getElementById("categoryPageInfo"),
+  orderResetFilters: document.getElementById("orderResetFilters"),
+  orderPrevPage: document.getElementById("orderPrevPage"),
+  orderNextPage: document.getElementById("orderNextPage"),
+  orderPageInfo: document.getElementById("orderPageInfo"),
   productDetails: document.getElementById("productDetails"),
   productDetailsPlaceholder: document.getElementById("productDetailsPlaceholder"),
   productReviewsPanel: document.getElementById("productReviewsPanel"),
@@ -44,12 +61,8 @@ const elements = {
   productReviewsPlaceholder: document.getElementById("productReviewsPlaceholder"),
   currencyRates: document.getElementById("currencyRates"),
   themeToggleBtn: document.getElementById("themeToggleBtn"),
-  detailProductId: document.getElementById("detailProductId"),
-  detailProductSku: document.getElementById("detailProductSku"),
-  detailProductName: document.getElementById("detailProductName"),
-  detailProductCategory: document.getElementById("detailProductCategory"),
-  detailProductPrice: document.getElementById("detailProductPrice"),
-  detailProductStock: document.getElementById("detailProductStock"),
+  productSubmit: document.getElementById("productSubmit"),
+  resetProductButton: document.getElementById("resetProduct"),
   productAttributesList: document.getElementById("productAttributesList"),
   productImagesList: document.getElementById("productImagesList"),
   attributeForm: document.getElementById("attributeForm"),
@@ -161,6 +174,7 @@ function setActiveTab(tabName) {
 function resetProductForm() {
   selectedProductId = null;
   document.getElementById("productId").value = "";
+  document.getElementById("productDisplayId").value = "";
   document.getElementById("productSku").value = "";
   document.getElementById("productName").value = "";
   document.getElementById("productDescription").value = "";
@@ -171,6 +185,7 @@ function resetProductForm() {
   elements.productDetailsPlaceholder.hidden = false;
   elements.productAttributesList.innerHTML = "";
   elements.productImagesList.innerHTML = "";
+  updateProductFormButtons();
 }
 
 function resetCategoryForm() {
@@ -178,6 +193,12 @@ function resetCategoryForm() {
   document.getElementById("categoryId").value = "";
   document.getElementById("categoryName").value = "";
   document.getElementById("categoryParent").value = "";
+}
+
+function updateProductFormButtons() {
+  const productId = document.getElementById("productId").value;
+  elements.productSubmit.textContent = productId ? "Сохранить" : "Добавить";
+  elements.resetProductButton.textContent = productId ? "Закрыть" : "Сброс";
 }
 
 function getCategoryName(categoryId) {
@@ -189,6 +210,116 @@ function updateProductPagination() {
   elements.productPageInfo.textContent = `Страница ${productPage + 1}`;
   elements.productPrevPage.disabled = productPage === 0;
   elements.productNextPage.disabled = !productHasMore;
+}
+
+function getCategoryParentName(category) {
+  const parent = categories.find((item) => item.category_id === category.parent_category_id);
+  return parent ? parent.name : "";
+}
+
+function getFilteredCategories() {
+  const search = elements.categorySearch?.value.trim().toLowerCase() || "";
+  let list = [...categories];
+  if (search) {
+    list = list.filter((category) => {
+      const text = `${category.category_id} ${category.name} ${getCategoryParentName(category)}`.toLowerCase();
+      return text.includes(search);
+    });
+  }
+  const sortBy = elements.categorySortBy?.value || "id";
+  list.sort((a, b) => {
+    if (sortBy === "name") {
+      return a.name.localeCompare(b.name);
+    }
+    return a.category_id - b.category_id;
+  });
+  return list;
+}
+
+function updateCategoryPagination() {
+  elements.categoryPageInfo.textContent = `Страница ${categoryPage + 1}`;
+  elements.categoryPrevPage.disabled = categoryPage === 0;
+  elements.categoryNextPage.disabled = !categoryHasMore;
+}
+
+function renderCategories() {
+  const filtered = getFilteredCategories();
+  if (categoryPage > 0 && categoryPage * CATEGORIES_PER_PAGE >= filtered.length) {
+    categoryPage = 0;
+  }
+  categoryHasMore = filtered.length > (categoryPage + 1) * CATEGORIES_PER_PAGE;
+  const pageItems = filtered.slice(categoryPage * CATEGORIES_PER_PAGE, (categoryPage + 1) * CATEGORIES_PER_PAGE);
+  elements.categoriesTable.innerHTML = "";
+  pageItems.forEach((category) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${category.category_id}</td>
+      <td>${category.name}</td>
+      <td>${getCategoryParentName(category)}</td>
+      <td class="actions-cell">
+        <button data-id="${category.category_id}" class="secondary-button edit-button edit-category">Ред.</button>
+        <button data-id="${category.category_id}" class="secondary-button edit-button delete-category">Удл.</button>
+      </td>
+    `;
+    elements.categoriesTable.appendChild(row);
+  });
+  updateCategoryPagination();
+}
+
+function getFilteredOrders() {
+  const sortBy = elements.orderSortBy?.value || "date";
+  let list = [...orders];
+  list.sort((a, b) => {productImagesList
+    if (sortBy === "client") {
+      return a.user_id - b.user_id;
+    }
+    if (sortBy === "product") {
+      const aItem = a.items[0]?.product_id || 0;
+      const bItem = b.items[0]?.product_id || 0;
+      return aItem - bItem;
+    }
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  return list;
+}
+
+function updateOrderPagination() {
+  elements.orderPageInfo.textContent = `Страница ${orderPage + 1}`;
+  elements.orderPrevPage.disabled = orderPage === 0;
+  elements.orderNextPage.disabled = !orderHasMore;
+}
+
+function renderOrders() {
+  const filtered = getFilteredOrders();
+  if (orderPage > 0 && orderPage * ORDERS_PER_PAGE >= filtered.length) {
+    orderPage = 0;
+  }
+  orderHasMore = filtered.length > (orderPage + 1) * ORDERS_PER_PAGE;
+  const pageItems = filtered.slice(orderPage * ORDERS_PER_PAGE, (orderPage + 1) * ORDERS_PER_PAGE);
+  elements.ordersTable.innerHTML = "";
+  pageItems.forEach((order) => {
+    const itemText = order.items.map((item) => `${item.product_id}×${item.quantity}`).join(", ");
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${order.order_id}</td>
+      <td>${order.user_id}</td>
+      <td>${order.status}</td>
+      <td>${order.total_amount_in_base.toFixed(2)}</td>
+      <td>${formatDate(order.created_at)}</td>
+      <td>${itemText || "-"}</td>
+      <td>
+        <select data-id="${order.order_id}" class="order-status-select">
+          <option value="created" ${order.status === "created" ? "selected" : ""}>created</option>
+          <option value="payed" ${order.status === "payed" ? "selected" : ""}>payed</option>
+          <option value="processing" ${order.status === "processing" ? "selected" : ""}>processing</option>
+          <option value="completed" ${order.status === "completed" ? "selected" : ""}>completed</option>
+          <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>cancelled</option>
+        </select>
+      </td>
+    `;
+    elements.ordersTable.appendChild(row);
+  });
+  updateOrderPagination();
 }
 
 function buildProductQueryParams(page = 0) {
@@ -207,6 +338,7 @@ async function loadProducts(page = 0) {
   productPage = page;
   const params = buildProductQueryParams(page);
   products = await request(`public/products?${params}`);
+  products.sort((a, b) => a.product_id - b.product_id);
   productHasMore = products.length > PRODUCTS_PER_PAGE;
   if (productHasMore) {
     products = products.slice(0, PRODUCTS_PER_PAGE);
@@ -324,12 +456,8 @@ async function loadCategories() {
   renderCategories();
 }
 
-async function loadProducts() {
-  products = await request("public/products");
-  renderProducts();
-}
-
 async function loadOrderDetails() {
+  orderPage = 0;
   const status = elements.orderStatusFilter.value;
   const statusQuery = status ? `?status=${encodeURIComponent(status)}` : "";
   orders = await request(`employee/orders${statusQuery}`);
@@ -340,87 +468,12 @@ async function loadOrders() {
   await loadOrderDetails();
 }
 
-function renderProducts() {
-  elements.productsTable.innerHTML = "";
-  products.forEach((product) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${product.product_id}</td>
-      <td>${product.sku}</td>
-      <td>${product.name}</td>
-      <td>${product.base_price.toFixed(2)}</td>
-      <td>${product.stock}</td>
-      <td>${getCategoryName(product.category_id)}</td>
-      <td class="actions-cell">
-        <button data-id="${product.product_id}" class="secondary-button edit-button edit-product">Ред.</button>
-        <button data-id="${product.product_id}" class="secondary-button edit-button delete-product">Удл.</button>
-      </td>
-    `;
-    elements.productsTable.appendChild(row);
-  });
-}
-
-function renderCategories() {
-  elements.categoriesTable.innerHTML = "";
-  categories.forEach((category) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${category.category_id}</td>
-      <td>${category.name}</td>
-      <td>${getCategoryName(category.parent_category_id)}</td>
-      <td class="actions-cell">
-        <button data-id="${category.category_id}" class="secondary-button edit-button edit-category">Ред.</button>
-        <button data-id="${category.category_id}" class="secondary-button edit-button delete-category">Удл.</button>
-      </td>
-    `;
-    elements.categoriesTable.appendChild(row);
-  });
-}
-
-function renderOrders() {
-  const sortBy = elements.orderSortBy.value;
-  const sorted = [...orders].sort((a, b) => {
-    if (sortBy === "client") {
-      return a.user_id - b.user_id;
-    }
-    if (sortBy === "product") {
-      const aItem = a.items[0]?.product_id || 0;
-      const bItem = b.items[0]?.product_id || 0;
-      return aItem - bItem;
-    }
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
-
-  elements.ordersTable.innerHTML = "";
-  sorted.forEach((order) => {
-    const itemText = order.items.map((item) => `${item.product_id}×${item.quantity}`).join(", ");
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${order.order_id}</td>
-      <td>${order.user_id}</td>
-      <td>${order.status}</td>
-      <td>${order.total_amount_in_base.toFixed(2)}</td>
-      <td>${formatDate(order.created_at)}</td>
-      <td>${itemText || "-"}</td>
-      <td>
-        <select data-id="${order.order_id}" class="order-status-select">
-          <option value="created" ${order.status === "created" ? "selected" : ""}>created</option>
-          <option value="payed" ${order.status === "payed" ? "selected" : ""}>payed</option>
-          <option value="processing" ${order.status === "processing" ? "selected" : ""}>processing</option>
-          <option value="completed" ${order.status === "completed" ? "selected" : ""}>completed</option>
-          <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>cancelled</option>
-        </select>
-      </td>
-    `;
-    elements.ordersTable.appendChild(row);
-  });
-}
-
 async function selectProduct(productId) {
   const product = products.find((item) => item.product_id === productId);
   if (!product) return;
   selectedProductId = productId;
   document.getElementById("productId").value = product.product_id;
+  document.getElementById("productDisplayId").value = product.product_id;
   document.getElementById("productSku").value = product.sku;
   document.getElementById("productName").value = product.name;
   document.getElementById("productDescription").value = product.description || "";
@@ -428,15 +481,9 @@ async function selectProduct(productId) {
   document.getElementById("productStock").value = product.stock;
   document.getElementById("productCategory").value = product.category_id || "";
 
-  elements.detailProductId.textContent = product.product_id;
-  elements.detailProductSku.textContent = product.sku;
-  elements.detailProductName.textContent = product.name;
-  elements.detailProductCategory.textContent = getCategoryName(product.category_id);
-  elements.detailProductPrice.textContent = product.base_price.toFixed(2);
-  elements.detailProductStock.textContent = product.stock;
-
   elements.productDetailsPlaceholder.hidden = true;
   elements.productDetails.hidden = false;
+  updateProductFormButtons();
 
   await loadProductAttributes(productId);
   await loadProductImages(productId);
@@ -463,20 +510,55 @@ async function loadProductImages(productId) {
   try {
     const images = await request(`public/products/${productId}/images`);
     elements.productImagesList.innerHTML = "";
+    const nextOrder = images.length > 0 ? Math.max(...images.map((item) => item.image_order)) + 1 : 0;
+    const orderInput = document.getElementById("imageOrder");
+    if (orderInput) {
+      orderInput.value = String(nextOrder);
+    }
     images.forEach((image) => {
       const row = document.createElement("div");
-      row.className = "compact-row";
+      row.className = "compact-row image-row";
       row.innerHTML = `
-        <div><a href="${image.image_url}" target="_blank">${image.image_url}</a> (#${image.image_order})</div>
+        <div class="image-item">
+          <a href="${image.image_url}" data-image-url="${image.image_url}" class="image-preview-link" target="_blank" rel="noopener noreferrer">
+            <img src="${image.image_url}" alt="Изображение #${image.image_order}" class="image-preview" />
+            <span>Изображение #${image.image_order}</span>
+          </a>
+        </div>
         <button data-id="${image.image_id}" class="secondary-button delete-image">Удалить</button>
       `;
       elements.productImagesList.appendChild(row);
     });
     if (images.length === 0) {
-      elements.productImagesList.textContent = "Нет изображений...";
+      elements.productImagesList.textContent = "Нет изображений.";
     }
   } catch (error) {
     elements.productImagesList.textContent = "Не удалось загрузить изображения.";
+  }
+}
+
+async function openImageInTab(imageUrl) {
+  let win = window.open("", "_blank");
+  if (!win) {
+    alert("Не удалось открыть новое окно. Разрешите всплывающие окна для сайта.");
+    return;
+  }
+  win.document.write("<p>Загрузка изображения...</p>");
+  try {
+    const response = await fetch(imageUrl, {
+      method: "GET",
+      headers: getAuthHeaders(false, { method: "GET" }),
+    });
+    if (!response.ok) {
+      throw new Error("Не удалось открыть изображение");
+    }
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    win.location.href = blobUrl;
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } catch (error) {
+    win.close();
+    alert(error.message || "Не удалось открыть изображение.");
   }
 }
 
@@ -492,19 +574,25 @@ async function saveProduct(event) {
     category_id: document.getElementById("productCategory").value || null,
   };
   try {
+    let savedProduct = null;
     if (productId) {
       await request(`employee/products/${productId}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
+      savedProduct = { product_id: Number(productId) };
     } else {
-      await request("employee/products", {
+      savedProduct = await request("employee/products", {
         method: "POST",
         body: JSON.stringify(payload),
       });
     }
     await loadProducts();
-    resetProductForm();
+    if (savedProduct?.product_id) {
+      await selectProduct(Number(savedProduct.product_id));
+    } else {
+      resetProductForm();
+    }
   } catch (error) {
     alert(error.message);
   }
@@ -584,22 +672,31 @@ async function saveImage(event) {
     return;
   }
   const fileInput = document.getElementById("imageFile");
-  const file = fileInput.files?.[0];
-  if (!file) {
+  const files = Array.from(fileInput.files || []);
+  if (files.length === 0) {
     alert("Выберите файл изображения.");
     return;
   }
-  const imageOrder = Number(document.getElementById("imageOrder").value || 0);
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("image_order", String(imageOrder));
-  await request(`employee/products/${selectedProductId}/images`, {
-    method: "POST",
-    body: formData,
-  });
-  fileInput.value = "";
-  document.getElementById("imageOrder").value = "0";
-  await loadProductImages(selectedProductId);
+  let nextOrder = Number(document.getElementById("imageOrder").value);
+  if (!Number.isFinite(nextOrder) || nextOrder < 0) {
+    nextOrder = 0;
+  }
+  try {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      await request(`employee/products/${selectedProductId}/images?image_order=${encodeURIComponent(nextOrder)}`, {
+        method: "POST",
+        body: formData,
+      });
+      nextOrder += 1;
+    }
+    fileInput.value = "";
+    document.getElementById("imageOrder").value = String(nextOrder);
+    await loadProductImages(selectedProductId);
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
 async function deleteImage(imageId) {
@@ -665,6 +762,15 @@ function attachDelegatedEvents() {
       await deleteImage(imageId);
       return;
     }
+    const imageLink = event.target.closest(".image-preview-link");
+    if (imageLink) {
+      event.preventDefault();
+      const imageUrl = imageLink.dataset.imageUrl;
+      if (imageUrl) {
+        await openImageInTab(imageUrl);
+      }
+      return;
+    }
   });
 
   document.body.addEventListener("change", async (event) => {
@@ -689,7 +795,11 @@ function setupListeners() {
   bind(elements.refreshCategories, "click", loadCategories);
   bind(elements.refreshOrders, "click", loadOrders);
   bind(elements.orderStatusFilter, "change", loadOrders);
-  bind(elements.orderSortBy, "change", renderOrders);
+  bind(elements.orderSortBy, "change", () => {
+    orderPage = 0;
+    renderOrders();
+  });
+  bind(elements.productCategoryFilter, "change", () => loadProducts(0));
   bind(elements.productForm, "submit", saveProduct);
   bind(document.getElementById("resetProduct"), "click", resetProductForm);
   bind(elements.categoryForm, "submit", saveCategory);
@@ -697,6 +807,12 @@ function setupListeners() {
   bind(elements.attributeForm, "submit", saveAttribute);
   bind(elements.imageForm, "submit", saveImage);
   bind(elements.productSearchBtn, "click", () => loadProducts(0));
+  bind(elements.productSearch, "keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      loadProducts(0);
+    }
+  });
   bind(elements.productResetFilters, "click", () => {
     if (elements.productSearch) elements.productSearch.value = "";
     if (elements.productCategoryFilter) elements.productCategoryFilter.value = "";
@@ -704,11 +820,55 @@ function setupListeners() {
   });
   bind(elements.productPrevPage, "click", () => loadProducts(productPage - 1));
   bind(elements.productNextPage, "click", () => loadProducts(productPage + 1));
+  bind(elements.categorySearch, "keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      categoryPage = 0;
+      renderCategories();
+    }
+  });
+  bind(elements.categorySearchBtn, "click", () => {
+    categoryPage = 0;
+    renderCategories();
+  });
+  bind(elements.categorySortBy, "change", () => {
+    categoryPage = 0;
+    renderCategories();
+  });
+  bind(elements.categoryResetFilters, "click", () => {
+    if (elements.categorySearch) elements.categorySearch.value = "";
+    if (elements.categorySortBy) elements.categorySortBy.value = "id";
+    categoryPage = 0;
+    renderCategories();
+  });
+  bind(elements.categoryPrevPage, "click", () => {
+    categoryPage = Math.max(0, categoryPage - 1);
+    renderCategories();
+  });
+  bind(elements.categoryNextPage, "click", () => {
+    categoryPage += 1;
+    renderCategories();
+  });
+  bind(elements.orderResetFilters, "click", () => {
+    if (elements.orderStatusFilter) elements.orderStatusFilter.value = "";
+    if (elements.orderSortBy) elements.orderSortBy.value = "date";
+    orderPage = 0;
+    loadOrders();
+  });
+  bind(elements.orderPrevPage, "click", () => {
+    orderPage = Math.max(0, orderPage - 1);
+    renderOrders();
+  });
+  bind(elements.orderNextPage, "click", () => {
+    orderPage += 1;
+    renderOrders();
+  });
   bind(elements.themeToggleBtn, "click", toggleTheme);
 }
 
 async function init() {
   setupListeners();
+  updateProductFormButtons();
   attachDelegatedEvents();
   applyTheme();
   await loadExchangeRates();

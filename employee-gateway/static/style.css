@@ -105,6 +105,10 @@ body {
   margin-bottom: 20px;
 }
 
+.panel-card h4 {
+  margin-bottom: 0px;
+}
+
 button,
 a.secondary-button,
 a.primary-button {
@@ -115,7 +119,7 @@ a.primary-button {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: background-color 160ms ease, transform 160ms ease, opacity 160ms ease;
+  transition: background-color 160ms ease, transform 160ms ease, opacity 160ms ease; 
 }
 
 .primary-button,
@@ -225,15 +229,65 @@ label {
   border: 1px solid #334155;
   padding: 10px;
   border-radius: 10px;
+  margin-top: 8px;
 }
 
 .compact-row button {
   min-width: 80px;
 }
 
+.image-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.image-item a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  max-width: 250px;
+}
+
+.image-item a:hover {
+  text-decoration: underline;
+}
+
+.image-item a span {
+  display: inline-block;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  vertical-align: middle;
+}
+
+.image-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
 .compact-form {
   display: grid;
   gap: 8px;
+}
+
+.compact-form input {
+   margin: 8px 0px 8px 0px
+}
+
+#attributeName {
+  margin-top: 16px;
+  margin-bottom: 0px;
 }
 
 .form-actions {
@@ -245,7 +299,7 @@ label {
 .actions-cell {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 8px;
   max-width: 300px;
   width: 100%;
 }
@@ -272,8 +326,13 @@ label {
   flex-wrap: wrap;
   justify-content: start;
   gap: 12px;
-  align-items: center;
+  align-items: baseline;
   margin: 0px 0px 16px 0px;
+}
+
+.panel-count {
+  color: #9ca3af;
+  font-size: 0.95rem;
 }
 
 .panel-header-multiline .toolbar {
@@ -283,7 +342,7 @@ label {
 
 .toolbar input,
 .toolbar select {
-  max-width: 300px;
+  max-width: 250px;
   margin: 0px 0px 0px 0px;
 }
 

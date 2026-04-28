@@ -23,8 +23,9 @@ async def list_products(
     if search:
         pattern = f"%{search}%"
         query = query.where(
-            or_(Product.name.ilike(pattern), Product.description.ilike(pattern))
+            or_(Product.sku.ilike(pattern), Product.name.ilike(pattern), Product.description.ilike(pattern))
         )
+    query = query.order_by(Product.product_id)
     result = await db.execute(query.offset(skip).limit(limit))
     return result.scalars().all()
 

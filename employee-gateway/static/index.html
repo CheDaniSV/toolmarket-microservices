@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Toolmarket Admin</title>
   <link rel="stylesheet" href="./static/style.css" />
+  <link rel="icon" type="image/x-icon" href="./static/favicon.png" />
 </head>
 <body>
   <div class="page-shell">
@@ -37,8 +38,8 @@
       <section id="appSection" hidden>
         <div class="tabs">
           <button data-tab="products" class="tab-button active">Товары</button>
-          <button data-tab="categories" class="tab-button">Категории</button>
           <button data-tab="orders" class="tab-button">Заказы</button>
+          <button data-tab="categories" class="tab-button">Категории</button>
         </div>
 
         <div id="productsTab" class="tab-panel">
@@ -51,6 +52,8 @@
               <h3>Форма товара</h3>
               <form id="productForm">
                 <input type="hidden" id="productId" />
+                <label>ID товара</label>
+                <input id="productDisplayId" readonly placeholder="Не выбран" />
                 <label>SKU</label>
                 <input id="productSku" required />
                 <label>Название</label>
@@ -64,31 +67,15 @@
                 <label>Описание</label>
                 <textarea id="productDescription"></textarea>
                 <div class="form-actions">
-                  <button type="submit" class="primary-button">Сохранить</button>
+                  <button id="productSubmit" type="submit" class="primary-button">Добавить</button>
                   <button id="resetProduct" type="button" class="secondary-button">Сброс</button>
                 </div>
               </form>
             </div>
             <div class="panel-card">
               <h3>Подробности товара</h3>
-              <div id="productDetailsPlaceholder">Выберите товар из списка, чтобы просмотреть атрибуты и изображения.</div>
+              <div id="productDetailsPlaceholder">Выберите товар для редактирования или создайте новый.</div>
               <div id="productDetails" hidden>
-                <div class="details-row">
-                  <div>
-                    <strong>ID:</strong> <span id="detailProductId"></span>
-                  </div>
-                  <div>
-                    <strong>SKU:</strong> <span id="detailProductSku"></span>
-                  </div>
-                </div>
-                <div class="details-row">
-                  <div><strong>Название:</strong> <span id="detailProductName"></span></div>
-                  <div><strong>Категория:</strong> <span id="detailProductCategory"></span></div>
-                </div>
-                <div class="details-row">
-                  <div><strong>Цена:</strong> <span id="detailProductPrice"></span></div>
-                  <div><strong>Склад:</strong> <span id="detailProductStock"></span></div>
-                </div>
                 <section class="subpanel">
                   <h4>Атрибуты</h4>
                   <div id="productAttributesList" class="compact-list"></div>
@@ -103,9 +90,9 @@
                   <div id="productImagesList" class="compact-list"></div>
                   <form id="imageForm" class="compact-form">
                     <h4>Файл изображения</h4>
-                    <input id="imageFile" type="file" accept="image/*" required />
-                    <h4>Порядок</h4>
-                    <input id="imageOrder" type="number" placeholder="Порядок" value="0" />
+                    <input id="imageFile" type="file" accept="image/*" multiple required />
+                    <h4>Порядок отображения</h4>
+                    <input id="imageOrder" type="number" placeholder="Порядок" value="0" min="0" />
                     <button type="submit" class="primary-button">Добавить</button>
                   </form>
                 </section>
@@ -119,13 +106,14 @@
               </div>
             </div>
           </div>
+
           <div class="panel-card">
             <h3>Список товаров</h3>
             <div class="toolbar">
               <select id="productCategoryFilter">
                 <option value="">Все категории</option>
               </select>
-              <input id="productSearch" type="search" placeholder="Поиск по названию и описанию"/>
+              <input id="productSearch" type="search" placeholder="Поиск"/>
               <button id="productSearchBtn" class="secondary-button">Найти</button>
               <button id="productResetFilters" class="secondary-button">Сброс</button>
             </div>
@@ -167,13 +155,23 @@
                   <option value="">Без родителя</option>
                 </select>
                 <div class="form-actions">
-                  <button type="submit" class="primary-button">Сохранить</button>
+                  <button type="submit" class="primary-button">Добавить</button>
                   <button id="resetCategory" type="button" class="secondary-button">Сброс</button>
                 </div>
               </form>
             </div>
             <div class="panel-card">
               <h3>Список категорий</h3>
+              <div class="toolbar">
+                <input id="categorySearch" type="search" placeholder="Поиск по названию" />
+                <button id="categorySearchBtn" type="button" class="secondary-button">Найти</button>
+                <label>Сортировка</label>
+                <select id="categorySortBy">
+                  <option value="id">По ID</option>
+                  <option value="name">По названию</option>
+                </select>
+                <button id="categoryResetFilters" class="secondary-button">Сброс</button>
+              </div>
               <table class="data-table">
                 <thead>
                   <tr>
@@ -185,6 +183,11 @@
                 </thead>
                 <tbody id="categoriesTable"></tbody>
               </table>
+              <div class="pagination-bar">
+                <button id="categoryPrevPage" class="secondary-button">Пред.</button>
+                <span id="categoryPageInfo">Страница 1</span>
+                <button id="categoryNextPage" class="secondary-button">След.</button>
+              </div>
             </div>
         </div>
 
@@ -210,6 +213,7 @@
                 <option value="client">По клиенту</option>
                 <option value="product">По товару</option>
               </select>
+              <button id="orderResetFilters" class="secondary-button">Сброс</button>
             </div>
             <table class="data-table">
               <thead>
@@ -225,6 +229,11 @@
               </thead>
               <tbody id="ordersTable"></tbody>
             </table>
+            <div class="pagination-bar">
+              <button id="orderPrevPage" class="secondary-button">Пред.</button>
+              <span id="orderPageInfo">Страница 1</span>
+              <button id="orderNextPage" class="secondary-button">След.</button>
+            </div>
           </div>
         </div>
       </section>
