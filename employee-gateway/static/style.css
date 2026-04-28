@@ -242,6 +242,21 @@ label {
   flex-wrap: wrap;
 }
 
+.actions-cell {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  max-width: 300px;
+  width: 100%;
+}
+
+.edit-button {
+  flex-grow: 1;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
 .hidden {
   display: none !important;
 }
@@ -255,10 +270,10 @@ label {
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: start;
   gap: 12px;
   align-items: center;
-  margin-bottom: 16px;
+  margin: 0px 0px 16px 0px;
 }
 
 .panel-header-multiline .toolbar {
@@ -268,13 +283,14 @@ label {
 
 .toolbar input,
 .toolbar select {
-  max-width: 220px;
+  max-width: 300px;
+  margin: 0px 0px 0px 0px;
 }
 
 .pagination-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: start;
   gap: 10px;
   margin-top: 16px;
 }

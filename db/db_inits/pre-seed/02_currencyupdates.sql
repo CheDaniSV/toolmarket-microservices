@@ -75,7 +75,7 @@ $$ LANGUAGE plpgsql;
 -- Планируем выполнение функции каждый час
 SELECT cron.schedule(
     'update-currency-rates',      -- Уникальное имя задания
-    '0/10 * * * *',                  -- Cron-выражение: каждый час в 0 минут
+    '*/10 * * * *',                  -- Cron-выражение: каждый час в 0 минут
     'SELECT update_currency_rates();'
 );
 

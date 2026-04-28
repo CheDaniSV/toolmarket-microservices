@@ -44,14 +44,6 @@
         <div id="productsTab" class="tab-panel">
           <div class="panel-header panel-header-multiline">
             <h2>Товары</h2>
-            <div class="toolbar">
-              <input id="productSearch" type="search" placeholder="Поиск по названию и описанию" />
-              <select id="productCategoryFilter">
-                <option value="">Все категории</option>
-              </select>
-              <button id="productSearchBtn" class="secondary-button">Найти</button>
-              <button id="productResetFilters" class="secondary-button">Сброс</button>
-            </div>
             <button id="refreshProducts" class="secondary-button">Обновить</button>
           </div>
           <div class="grid-two">
@@ -110,9 +102,9 @@
                   <h4>Изображения</h4>
                   <div id="productImagesList" class="compact-list"></div>
                   <form id="imageForm" class="compact-form">
-                    <label>Файл изображения</label>
+                    <h4>Файл изображения</h4>
                     <input id="imageFile" type="file" accept="image/*" required />
-                    <label>Порядок</label>
+                    <h4>Порядок</h4>
                     <input id="imageOrder" type="number" placeholder="Порядок" value="0" />
                     <button type="submit" class="primary-button">Добавить</button>
                   </form>
@@ -129,6 +121,14 @@
           </div>
           <div class="panel-card">
             <h3>Список товаров</h3>
+            <div class="toolbar">
+              <select id="productCategoryFilter">
+                <option value="">Все категории</option>
+              </select>
+              <input id="productSearch" type="search" placeholder="Поиск по названию и описанию"/>
+              <button id="productSearchBtn" class="secondary-button">Найти</button>
+              <button id="productResetFilters" class="secondary-button">Сброс</button>
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
@@ -156,7 +156,6 @@
             <h2>Категории</h2>
             <button id="refreshCategories" class="secondary-button">Обновить</button>
           </div>
-          <div class="grid-two">
             <div class="panel-card">
               <h3>Форма категории</h3>
               <form id="categoryForm">
@@ -187,12 +186,14 @@
                 <tbody id="categoriesTable"></tbody>
               </table>
             </div>
-          </div>
         </div>
 
         <div id="ordersTab" class="tab-panel hidden">
           <div class="panel-header">
             <h2>Заказы</h2>
+            <button id="refreshOrders" class="secondary-button">Обновить</button>
+          </div>
+          <div class="panel-card">
             <div class="toolbar">
               <label>Статус</label>
               <select id="orderStatusFilter">
@@ -209,10 +210,7 @@
                 <option value="client">По клиенту</option>
                 <option value="product">По товару</option>
               </select>
-              <button id="refreshOrders" class="secondary-button">Обновить</button>
             </div>
-          </div>
-          <div class="panel-card">
             <table class="data-table">
               <thead>
                 <tr>

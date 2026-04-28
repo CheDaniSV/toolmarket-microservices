@@ -103,7 +103,12 @@ async function loadExchangeRates() {
     ]);
     const eur = 1 / eurRates[0]?.rate ?? null;
     const usd = 1 / usdRates[0]?.rate ?? null;
+
+    const validFrom = eurRates[0]?.valid_from ?? null;
+    const formattedDate = validFrom ? new Date(validFrom).toLocaleString(undefined, { hour12: false }) : "Unknown";
+
     elements.currencyRates.textContent = `EUR: ${eur ? eur.toFixed(2) : "N/A"} USD: ${usd ? usd.toFixed(2) : "N/A"}`;
+    elements.currencyRates.title = `Последнее обновление: ${formattedDate}`;
   } catch (error) {
     elements.currencyRates.textContent = "Не удалось загрузить курс валют";
     console.warn("Не удалось загрузить курсы валют", error);
@@ -223,8 +228,8 @@ function renderProducts() {
       <td>${product.stock}</td>
       <td>${getCategoryName(product.category_id)}</td>
       <td class="actions-cell">
-        <button data-id="${product.product_id}" class="secondary-button edit-product">Ред.</button>
-        <button data-id="${product.product_id}" class="secondary-button delete-product">Удал.</button>
+        <button data-id="${product.product_id}" class="secondary-button edit-button edit-product">Ред.</button>
+        <button data-id="${product.product_id}" class="secondary-button edit-button delete-product">Удл.</button>
       </td>
     `;
     elements.productsTable.appendChild(row);
@@ -347,8 +352,8 @@ function renderProducts() {
       <td>${product.stock}</td>
       <td>${getCategoryName(product.category_id)}</td>
       <td class="actions-cell">
-        <button data-id="${product.product_id}" class="secondary-button edit-product">Ред.</button>
-        <button data-id="${product.product_id}" class="secondary-button delete-product">Удал.</button>
+        <button data-id="${product.product_id}" class="secondary-button edit-button edit-product">Ред.</button>
+        <button data-id="${product.product_id}" class="secondary-button edit-button delete-product">Удл.</button>
       </td>
     `;
     elements.productsTable.appendChild(row);
@@ -363,9 +368,9 @@ function renderCategories() {
       <td>${category.category_id}</td>
       <td>${category.name}</td>
       <td>${getCategoryName(category.parent_category_id)}</td>
-      <td>
-        <button data-id="${category.category_id}" class="secondary-button edit-category">Ред.</button>
-        <button data-id="${category.category_id}" class="secondary-button delete-category">Удал.</button>
+      <td class="actions-cell">
+        <button data-id="${category.category_id}" class="secondary-button edit-button edit-category">Ред.</button>
+        <button data-id="${category.category_id}" class="secondary-button edit-button delete-category">Удл.</button>
       </td>
     `;
     elements.categoriesTable.appendChild(row);
@@ -468,7 +473,7 @@ async function loadProductImages(productId) {
       elements.productImagesList.appendChild(row);
     });
     if (images.length === 0) {
-      elements.productImagesList.textContent = "Нет изображений.";
+      elements.productImagesList.textContent = "Нет изображений...";
     }
   } catch (error) {
     elements.productImagesList.textContent = "Не удалось загрузить изображения.";
