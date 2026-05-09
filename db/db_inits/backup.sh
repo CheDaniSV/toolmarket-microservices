@@ -6,7 +6,7 @@ source ../../.env
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
 CONTAINER_NAME="db"
-BACKUP_DIR="../../backups"
+BACKUP_DIR="../backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_FILE="${BACKUP_DIR}/${POSTGRES_DB}_${TIMESTAMP}.dump"
 

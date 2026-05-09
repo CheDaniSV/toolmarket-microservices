@@ -29,6 +29,8 @@ from ..schemas import (
     ReviewOut,
     PaymentCreate,
     PaymentOut,
+    UserOut,
+    UserUpdate,
 )
 from ..dependencies import role_required, get_current_user
 
@@ -191,6 +193,45 @@ async def delete_address(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Address not found")
     await db.delete(existing)
     await db.commit()
+
+@router.put("/account", response_model=UserOut)
+async def update_my_account(
+    user_update: UserUpdate,
+    current_user: User = Depends(role_required(["customer", "employee"])),
+    db: AsyncSession = Depends(get_db),
+):
+    update_data = user_update.model_dump(exclude_unset=True)
+    if not update_data:
+        return current_user
+
+    if "username" in update_data:
+        username = update_data["username"].strip()
+        if username == "":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username may not be empty")
+        existing_user = await db.execute(
+            select(User).where(User.username == username, User.user_id != current_user.user_id)
+        )
+        if existing_user.scalar_one_or_none() is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
+        current_user.username = username
+
+    if "preferred_currency" in update_data:
+        currency_code = update_data["preferred_currency"].upper()
+        currency = await db.get(Currency, currency_code)
+        if currency is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preferred currency not found")
+        current_user.preferred_currency = currency_code
+
+    for field, value in update_data.items():
+        if field in {"username", "preferred_currency"}:
+            continue
+        setattr(current_user, field, value)
+
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
 
 @router.post("/orders", response_model=OrderOut)
 async def create_order(

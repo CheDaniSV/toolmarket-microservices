@@ -30,6 +30,12 @@ class UserOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    preferred_language: Optional[Literal["ru", "en"]]
+    preferred_currency: Optional[str] = None
+    preferred_payment_method: Optional[Literal["card", "paypal", "invoice"]]
+
 class CurrencyOut(BaseModel):
     code: str
     name: str
