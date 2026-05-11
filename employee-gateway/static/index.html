@@ -23,16 +23,20 @@
     </header>
 
     <main>
-      <section id="loginSection" class="card">
-        <h1>Вход для сотрудника</h1>
-        <form id="loginForm">
-          <label>Логин</label>
-          <input id="username" type="text" autocomplete="username" required />
-          <label>Пароль</label>
-          <input id="password" type="password" autocomplete="current-password" required />
-          <button type="submit" class="primary-button">Войти</button>
-        </form>
-        <div id="loginError" class="error-message"></div>
+      <section id="loginSection">
+        <div class="auth-container">
+          <div class="auth-form">
+            <h1>Вход</h1>
+            <form id="loginForm">
+              <label>Логин</label>
+              <input id="username" type="text" autocomplete="username" required />
+              <label>Пароль</label>
+              <input id="password" type="password" autocomplete="current-password" required />
+              <button type="submit" class="primary-button">Войти</button>
+            </form>
+            <div id="loginError" class="error-message"></div>
+          </div>
+        </div>
       </section>
 
       <section id="appSection" hidden>

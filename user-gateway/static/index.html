@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toolmarket</title>
+  <link rel="stylesheet" href="./static/style.css" />
+  <link rel="icon" type="image/x-icon" href="./static/favicon.png" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div id="brandLink" class="brand">Toolmarket</div>
+        <span id="userGreeting" class="user-greeting" hidden></span>
+      </div>
+      <div class="topbar-actions">
+        <button id="cartBtn" class="secondary-button" hidden>Корзина (<span id="cartCount">0</span>)</button>
+        <button id="accountBtn" class="secondary-button" hidden>Профиль</button>
+        <button id="themeToggleBtn" class="secondary-button">Светлая тема</button>
+        <button id="logoutBtn" class="secondary-button" hidden>Выйти</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Секция авторизации -->
+      <section id="authSection">
+        <div class="auth-container">
+          <!-- Форма входа -->
+          <div id="loginForm" class="auth-form">
+            <h1>Вход</h1>
+            <form id="loginFormElement">
+              <label>Логин</label>
+              <input id="loginUsername" type="text" autocomplete="username" required />
+              <label>Пароль</label>
+              <input id="loginPassword" type="password" autocomplete="current-password" required />
+              <button type="submit" class="primary-button">Войти</button>
+            </form>
+            <div id="loginError" class="error-message"></div>
+            <p>Нет аккаунта? <button type="button" id="switchToRegister" class="link-button">Регистрация</button></p>
+          </div>
+
+          <!-- Форма регистрации -->
+          <div id="registerForm" class="auth-form" hidden>
+            <h1>Регистрация</h1>
+            <form id="registerFormElement">
+              <label>Логин</label>
+              <input id="regUsername" type="text" autocomplete="username" required />
+              <label>Пароль</label>
+              <input id="regPassword" type="password" autocomplete="new-password" required />
+              <button type="submit" class="primary-button">Регистрация</button>
+            </form>
+            <div id="registerError" class="error-message"></div>
+            <p>Уже есть аккаунт? <button type="button" id="switchToLogin" class="link-button">Вход</button></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Главная секция приложения -->
+      <section id="appSection" hidden>
+
+        <!-- Вкладка товаров -->
+        <div id="productsTab" class="tab-panel">
+          <div class="panel-header">
+            <h2>Товары</h2>
+          </div>
+          <div class="toolbar">
+            <select id="productCategoryFilter">
+              <option value="">Все категории</option>
+            </select>
+            <input id="productSearch" type="search" placeholder="Поиск по названию"/>
+            <button id="productSearchBtn" class="secondary-button">Найти</button>
+            <button id="productResetFilters" class="secondary-button">Сброс</button>
+          </div>
+          <div id="productsGrid" class="products-grid"></div>
+          <div class="pagination-bar">
+            <button id="productPrevPage" class="secondary-button">Пред.</button>
+            <span id="productPageInfo">Страница 1</span>
+            <button id="productNextPage" class="secondary-button">След.</button>
+          </div>
+        </div>
+
+        <!-- Вкладка профиля -->
+        <div id="accountTab" class="tab-panel hidden">
+          <div class="panel-header">
+            <h2>Профиль</h2>
+          </div>
+          <div class="panel-card">
+            <form id="accountForm">
+              <label>Имя пользователя</label>
+              <input id="accountUsername" type="text" required />
+              <label>Язык (временно отключено)</label>
+              <select id="accountLanguage" disabled>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+              </select>
+              <label>Предпочитаемая валюта</label>
+              <select id="accountCurrency" required></select>
+              <label>Метод доставки</label>
+              <select id="accountShipment" required>
+                <option value="standard">Стандартная доставка</option>
+                <option value="express">Экспресс доставка</option>
+                <option value="pickup">Самовывоз</option>
+              </select>
+              <label>Метод оплаты</label>
+              <select id="accountPayment" required>
+                <option value="card">Карта</option>
+                <option value="paypal">PayPal</option>
+                <option value="invoice">Счёт</option>
+              </select>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Сохранить</button>
+              </div>
+            </form>
+            <div id="accountError" class="error-message"></div>
+            <div id="accountSuccess" class="success-message"></div>
+          </div>
+        </div>
+
+        <!-- Вкладка корзины -->
+        <div id="cartTab" class="tab-panel hidden">
+          <div class="panel-header">
+            <h2>Корзина</h2>
+            <button id="clearCartBtn" class="secondary-button">Очистить корзину</button>
+          </div>
+          <div class="panel-card">
+            <table class="data-table" id="cartTableContainer" hidden>
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Цена</th>
+                  <th>Количество</th>
+                  <th>Сумма</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="cartTable"></tbody>
+            </table>
+            <div id="cartEmpty" class="cart-empty">Корзина пуста</div>
+            <div id="cartTotal" class="cart-total" hidden>
+              <strong>Итого: <span id="cartTotalAmount">0</span> <span id="cartTotalCurrency">RUB</span></strong>
+            </div>
+            <div class="form-actions">
+              <button id="checkoutBtn" class="primary-button" hidden>Оформить заказ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Вкладка мои заказы -->
+        <div id="ordersTab" class="tab-panel hidden">
+          <div class="panel-header">
+            <h2>Мои заказы</h2>
+            <button id="refreshOrders" class="secondary-button">Обновить</button>
+          </div>
+          <div class="panel-card">
+            <div id="ordersEmpty" class="orders-empty">У вас нет заказов</div>
+            <div id="ordersList" class="orders-list"></div>
+          </div>
+        </div>
+
+        <!-- Модаль для оформления заказа -->
+        <div id="checkoutModal" class="modal" hidden>
+          <div class="modal-content">
+            <button type="button" class="modal-close" id="closeCheckoutModal">&times;</button>
+            <h2>Оформление заказа</h2>
+            <form id="checkoutForm">
+              <label>Адрес доставки</label>
+              <select id="checkoutShippingAddress" required></select>
+              <button type="button" id="addNewAddressBtn" class="secondary-button">Добавить новый адрес</button>
+              
+              <label>Адрес для счёта (опционально)</label>
+              <select id="checkoutBillingAddress">
+                <option value="">Использовать адрес доставки</option>
+              </select>
+              
+              <label>Способ доставки</label>
+              <select id="checkoutShipment" required>
+                <option value="standard">Стандартная доставка</option>
+                <option value="express">Экспресс доставка</option>
+                <option value="pickup">Самовывоз</option>
+              </select>
+              
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Далее к оплате</button>
+                <button type="button" id="cancelCheckoutBtn" class="secondary-button">Отмена</button>
+              </div>
+            </form>
+            <div id="checkoutError" class="error-message"></div>
+          </div>
+        </div>
+
+        <!-- Модаль для добавления адреса -->
+        <div id="addressModal" class="modal" hidden>
+          <div class="modal-content">
+            <button type="button" class="modal-close" id="closeAddressModal">&times;</button>
+            <h2>Новый адрес</h2>
+            <form id="addressForm">
+              <label>Улица</label>
+              <input id="addressStreet" type="text" required />
+              <label>Город</label>
+              <input id="addressCity" type="text" required />
+              <label>Почтовый код</label>
+              <input id="addressZip" type="text" required />
+              <label>Страна</label>
+              <input id="addressCountry" type="text" required />
+              <label>
+                <input id="addressDefault" type="checkbox" />
+                Сделать адресом по умолчанию
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Сохранить адрес</button>
+                <button type="button" id="cancelAddressBtn" class="secondary-button">Отмена</button>
+              </div>
+            </form>
+            <div id="addressError" class="error-message"></div>
+          </div>
+        </div>
+
+        <!-- Модаль для оплаты -->
+        <div id="paymentModal" class="modal" hidden>
+          <div class="modal-content">
+            <button type="button" class="modal-close" id="closePaymentModal">&times;</button>
+            <h2>Оплата заказа</h2>
+            <div id="paymentInfo"></div>
+            <form id="paymentForm">
+              <label>Сумма к оплате (RUB)</label>
+              <input id="paymentAmount" type="number" step="0.01" min="0.01" required readonly />
+              <label>Способ оплаты</label>
+              <select id="paymentMethod" required>
+                <option value="card">Карта</option>
+                <option value="paypal">PayPal</option>
+                <option value="invoice">Счёт</option>
+              </select>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Оплатить</button>
+                <button type="button" id="cancelPaymentBtn" class="secondary-button">Отмена</button>
+              </div>
+            </form>
+            <div id="paymentError" class="error-message"></div>
+            <div id="paymentSuccess" class="success-message"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Модаль просмотра товара -->
+      <div id="productModal" class="modal" hidden>
+        <div class="modal-content modal-large">
+          <button type="button" class="modal-close" id="closeProductModal">&times;</button>
+          <div class="product-detail">
+            <div id="productImages" class="product-images"></div>
+            <div id="productInfo" class="product-info">
+              <h2 id="modalProductName"></h2>
+              <p id="modalProductPrice" class="product-price"></p>
+              <p id="modalProductDescription"></p>
+              <div id="modalProductAttributes" class="product-attributes"></div>
+              <div class="form-actions">
+                <input id="productQuantity" type="number" min="1" value="1" />
+                <button id="addToCartBtn" class="primary-button">Добавить в корзину</button>
+              </div>
+            </div>
+          </div>
+          <div id="productReviews" class="product-reviews">
+            <h3>Отзывы</h3>
+            <div id="reviewsList"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="./static/app.js"></script>
+</body>
+</html>
