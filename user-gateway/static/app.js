@@ -10,6 +10,8 @@ let currentCurrency = localStorage.getItem("toolmarket_currency") || "RUB";
 let productPage = 0;
 const PRODUCTS_PER_PAGE = 12;
 let productHasMore = false;
+let isLoadingProducts = false;
+const SCROLL_LOAD_THRESHOLD = 300;
 let currentTheme = localStorage.getItem("toolmarket_theme") || "dark";
 
 const elements = {
@@ -30,12 +32,12 @@ const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
   accountBtn: document.getElementById("accountBtn"),
   cartBtn: document.getElementById("cartBtn"),
+  marketBtn: document.getElementById("marketBtn"),
   userGreeting: document.getElementById("userGreeting"),
   brandLink: document.getElementById("brandLink"),
   cartCount: document.getElementById("cartCount"),
   themeToggleBtn: document.getElementById("themeToggleBtn"),
   
-  tabs: document.querySelectorAll(".tab-button"),
   tabPanels: document.querySelectorAll(".tab-panel"),
   
   productsTab: document.getElementById("productsTab"),
@@ -44,9 +46,6 @@ const elements = {
   productSearch: document.getElementById("productSearch"),
   productSearchBtn: document.getElementById("productSearchBtn"),
   productResetFilters: document.getElementById("productResetFilters"),
-  productPrevPage: document.getElementById("productPrevPage"),
-  productNextPage: document.getElementById("productNextPage"),
-  productPageInfo: document.getElementById("productPageInfo"),
   
   accountTab: document.getElementById("accountTab"),
   accountForm: document.getElementById("accountForm"),
@@ -117,6 +116,7 @@ function showLogin() {
   elements.logoutBtn.hidden = true;
   elements.accountBtn.hidden = true;
   elements.cartBtn.hidden = true;
+  elements.marketBtn.hidden = true;
   elements.userGreeting.hidden = true;
   elements.loginForm.hidden = false;
   elements.registerForm.hidden = true;
@@ -128,6 +128,7 @@ function showApp() {
   elements.logoutBtn.hidden = false;
   elements.accountBtn.hidden = false;
   elements.cartBtn.hidden = false;
+  elements.marketBtn.hidden = false;
   elements.userGreeting.hidden = false;
   if (currentUser) {
     elements.userGreeting.textContent = `Привет, ${currentUser.username}!`;
@@ -194,14 +195,20 @@ function clearMessage(target) {
 }
 
 function setActiveTab(tabName) {
-  elements.tabs.forEach((button) => {
-    button.classList.toggle("active", button.dataset.tab === tabName);
-    if (button.dataset.tab === tabName) {
-      button.hidden = false;
-    }
-  });
   elements.tabPanels.forEach((panel) => {
-    panel.classList.toggle("hidden", panel.id !== `${tabName}Tab`);
+    panel.hidden = panel.id !== `${tabName}Tab`;
+  });
+}
+
+function showPanels(panelNames = []) {
+  elements.tabPanels.forEach((panel) => {
+    panel.hidden = true;
+  });
+  panelNames.forEach((name) => {
+    const panel = elements[`${name}Tab`];
+    if (panel) {
+      panel.hidden = false;
+    }
   });
 }
 
@@ -285,18 +292,43 @@ async function loadCurrencies() {
   }
 }
 
-async function loadProducts(page = 0) {
+async function loadProducts(page = 0, append = false) {
+  if (isLoadingProducts) return;
+  isLoadingProducts = true;
   try {
     const search = elements.productSearch.value.trim();
     const category = elements.productCategoryFilter.value;
     const query = `public/products?limit=${PRODUCTS_PER_PAGE}&offset=${page * PRODUCTS_PER_PAGE}${search ? `&search=${encodeURIComponent(search)}` : ""}${category ? `&category_id=${category}` : ""}`;
     const response = await request(query, { method: "GET" });
-    products = Array.isArray(response) ? response : [];
-    productHasMore = products.length === PRODUCTS_PER_PAGE;
-    productPage = page;
-    await renderProducts();
+    const responseProducts = Array.isArray(response) ? response : [];
+    const existingIds = new Set(products.map(p => p.product_id));
+    const uniqueNewProducts = responseProducts.filter(p => !existingIds.has(p.product_id));
+    productHasMore = uniqueNewProducts.length === PRODUCTS_PER_PAGE;
+    if (append) {
+      products = products.concat(uniqueNewProducts);
+      productPage = page;
+    } else {
+      products = uniqueNewProducts;
+      productPage = page;
+    }
+    await renderProducts(append);
+    if (!productHasMore) {
+      const endMessage = document.createElement('div');
+      endMessage.className = 'end-message';
+      endMessage.textContent = 'Вы долистали до конца :)';
+      elements.productsGrid.appendChild(endMessage);
+    }
   } catch (error) {
     console.error("Ошибка при загрузке товаров", error);
+  } finally {
+    isLoadingProducts = false;
+    // Check if we need to load more after rendering completes
+    if (productHasMore) {
+      const scrollThreshold = document.body.offsetHeight - window.innerHeight - SCROLL_LOAD_THRESHOLD;
+      if (window.scrollY >= scrollThreshold) {
+        await loadProducts(productPage + 1, true);
+      }
+    }
   }
 }
 
@@ -309,15 +341,29 @@ async function getProductCardImage(productId) {
   }
 }
 
-async function renderProducts() {
-  elements.productsGrid.innerHTML = "";
-  for (const product of products) {
-    const imageUrl = await getProductCardImage(product.product_id);
+async function renderProducts(append = false) {
+  if (!append) {
+    elements.productsGrid.innerHTML = "";
+  }
+  
+  const startIndex = append ? elements.productsGrid.children.length : 0;
+  const productsToRender = products.slice(startIndex);
+  
+  if (productsToRender.length === 0) return;
+  
+  // Fetch all images in parallel
+  const imageUrls = await Promise.all(
+    productsToRender.map((product) => getProductCardImage(product.product_id))
+  );
+  
+  // Render all products together
+  productsToRender.forEach((product, index) => {
+    const imageUrl = imageUrls[index];
     const card = document.createElement("div");
     card.className = "product-card";
     card.innerHTML = `
       <div class="product-image-container">
-        ${imageUrl ? `<img src="${imageUrl}" alt="${product.name}" class="product-image" />` : `<div class="product-image-placeholder">Нет изображения</div>`}
+        ${imageUrl ? `<img src="${imageUrl}" alt="${product.name}" class="product-image" loading="lazy" />` : `<div class="product-image-placeholder">Нет изображения</div>`}
       </div>
       <h3>${product.name}</h3>
       <p class="product-sku">SKU: ${product.sku}</p>
@@ -336,10 +382,7 @@ async function renderProducts() {
       });
     }
     elements.productsGrid.appendChild(card);
-  }
-  elements.productPageInfo.textContent = `Страница ${productPage + 1}`;
-  elements.productPrevPage.disabled = productPage === 0;
-  elements.productNextPage.disabled = !productHasMore;
+  });
 }
 
 async function showProductModal(productId) {
@@ -469,16 +512,17 @@ function renderCart() {
     elements.cartTable.innerHTML = "";
     let total = 0;
     cart.forEach((item) => {
-      // Загрузить название товара если его нет в кэше
       let productName = "Неизвестный товар";
+      let price = item.base_price || 0;
+      
       if (products && Array.isArray(products)) {
         const product = products.find((p) => p.product_id === item.product_id);
         if (product) {
           productName = product.name;
+          price = product.base_price || price;
         }
       }
       
-      const price = item.base_price || 0;
       const sum = price * item.quantity;
       total += sum;
       
@@ -654,24 +698,13 @@ async function updateAccount() {
     clearMessage(elements.accountError);
     clearMessage(elements.accountSuccess);
     
-    const updateData = {};
-    if (elements.accountUsername.value !== currentUser.username) {
-      updateData.username = elements.accountUsername.value;
-    }
-    if (elements.accountCurrency.value !== currentUser.preferred_currency) {
-      updateData.preferred_currency = elements.accountCurrency.value;
-    }
-    if (elements.accountShipment.value !== currentUser.preferred_shipment_method) {
-      updateData.preferred_shipment_method = elements.accountShipment.value;
-    }
-    if (elements.accountPayment.value !== currentUser.preferred_payment_method) {
-      updateData.preferred_payment_method = elements.accountPayment.value;
-    }
-    
-    if (Object.keys(updateData).length === 0) {
-      showMessage(elements.accountSuccess, "Нет изменений");
-      return;
-    }
+    const updateData = {
+      username: elements.accountUsername.value,
+      preferred_language: elements.accountLanguage.value,
+      preferred_currency: elements.accountCurrency.value,
+      preferred_payment_method: elements.accountPayment.value,
+      preferred_shipment_method: elements.accountShipment.value,
+    };
     
     const response = await request("customer/account", {
       method: "PUT",
@@ -734,7 +767,7 @@ function setupEventListeners() {
   elements.logoutBtn.addEventListener("click", logout);
   
   // Профиль
-  elements.accountBtn.addEventListener("click", () => {
+  elements.accountBtn.addEventListener("click", async () => {
     if (currentUser) {
       elements.accountUsername.value = currentUser.username;
       elements.accountLanguage.value = currentUser.preferred_language || "ru";
@@ -744,7 +777,8 @@ function setupEventListeners() {
       clearMessage(elements.accountError);
       clearMessage(elements.accountSuccess);
     }
-    setActiveTab("account");
+    await loadOrders();
+    showPanels(["account", "orders"]);
   });
   
   elements.accountForm.addEventListener("submit", async (e) => {
@@ -755,7 +789,7 @@ function setupEventListeners() {
   // Корзина
   elements.cartBtn.addEventListener("click", async () => {
     await loadCart();
-    setActiveTab("cart");
+    showPanels(["cart"]);
   });
   
   elements.cartTable.addEventListener("change", (e) => {
@@ -780,48 +814,54 @@ function setupEventListeners() {
   // Товары
   elements.productSearchBtn.addEventListener("click", () => {
     productPage = 0;
-    loadProducts(0);
+    productHasMore = true;
+    loadProducts(0, false);
   });
   
   elements.productSearch.addEventListener("keyup", (e) => {
     if (e.key === "Enter") {
       productPage = 0;
-      loadProducts(0);
+      productHasMore = true;
+      loadProducts(0, false);
     }
   });
   
   elements.productCategoryFilter.addEventListener("change", () => {
     productPage = 0;
-    loadProducts(0);
+    productHasMore = true;
+    loadProducts(0, false);
   });
   
   elements.productResetFilters.addEventListener("click", () => {
     elements.productSearch.value = "";
     elements.productCategoryFilter.value = "";
     productPage = 0;
-    loadProducts(0);
+    productHasMore = true;
+    loadProducts(0, false);
   });
   
-  elements.productPrevPage.addEventListener("click", () => {
-    if (productPage > 0) loadProducts(productPage - 1);
-  });
-  
-  elements.productNextPage.addEventListener("click", () => {
-    if (productHasMore) loadProducts(productPage + 1);
+  window.addEventListener("scroll", async () => {
+    if (!productHasMore || isLoadingProducts) return;
+    const scrollThreshold = document.body.offsetHeight - window.innerHeight - SCROLL_LOAD_THRESHOLD;
+    if (window.scrollY >= scrollThreshold) {
+      await loadProducts(productPage + 1, true);
+    }
   });
   
   // Тема
   elements.themeToggleBtn.addEventListener("click", toggleTheme);
   
-  // Вкладки
-  elements.tabs.forEach((tab) => {
-    tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
-  });
-  
   // Бренд возвращает к товарам
   if (elements.brandLink) {
     elements.brandLink.addEventListener("click", () => {
-      setActiveTab("products");
+      showPanels(["products"]);
+    });
+  }
+
+  // Маркет кнопка возвращает к товарам
+  if (elements.marketBtn) {
+    elements.marketBtn.addEventListener("click", () => {
+      showPanels(["products"]);
     });
   }
 
@@ -963,11 +1003,12 @@ async function init() {
     await loadCurrentUser();
     showApp();
     await loadCart();
+    showPanels(["products"]);
   } else {
     showLogin();
   }
   
-  await loadProducts(0);
+  await loadProducts(0, false);
 }
 
 document.addEventListener("DOMContentLoaded", init);

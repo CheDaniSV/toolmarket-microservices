@@ -326,8 +326,8 @@ function buildProductQueryParams(page = 0) {
   const params = new URLSearchParams();
   const search = elements.productSearch.value.trim();
   const categoryId = elements.productCategoryFilter.value;
-  const skip = page * PRODUCTS_PER_PAGE;
-  params.set("skip", String(skip));
+  const offset = page * PRODUCTS_PER_PAGE;
+  params.set("offset", String(offset));
   params.set("limit", String(PRODUCTS_PER_PAGE + 1));
   if (search) params.set("search", search);
   if (categoryId) params.set("category_id", categoryId);

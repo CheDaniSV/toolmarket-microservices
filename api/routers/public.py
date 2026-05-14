@@ -13,7 +13,7 @@ router = APIRouter(prefix="/public", tags=["public"])
 async def list_products(
     category_id: Optional[int] = Query(None, ge=1),
     search: Optional[str] = Query(None, min_length=1),
-    skip: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
@@ -26,7 +26,7 @@ async def list_products(
             or_(Product.sku.ilike(pattern), Product.name.ilike(pattern), Product.description.ilike(pattern))
         )
     query = query.order_by(Product.product_id)
-    result = await db.execute(query.offset(skip).limit(limit))
+    result = await db.execute(query.offset(offset).limit(limit))
     return result.scalars().all()
 
 @router.get("/products/{product_id}", response_model=ProductOut)

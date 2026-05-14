@@ -35,6 +35,7 @@ class UserUpdate(BaseModel):
     preferred_language: Optional[Literal["ru", "en"]]
     preferred_currency: Optional[str] = None
     preferred_payment_method: Optional[Literal["card", "paypal", "invoice"]]
+    preferred_shipment_method: Optional[str] = None
 
 class CurrencyOut(BaseModel):
     code: str
