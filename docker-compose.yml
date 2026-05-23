@@ -46,7 +46,7 @@ services:
     networks:
       - internal
       - gateway
-    ports: ["5001:8000"]
+    # ports: ["5001:8000"]
     depends_on: [db]
     env_file: .env
     volumes:
@@ -76,6 +76,9 @@ services:
       - gateway
       - internal
     # ports: ["3000:3000"]
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
     env_file: .env
     depends_on: [prometheus]
 

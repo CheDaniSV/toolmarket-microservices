@@ -4,12 +4,17 @@ import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 
 ROOT_DIR = Path(__file__).parent
 STATIC_DIR = ROOT_DIR / "static"
 API_SERVICE = "http://api:8000"
 
 app = FastAPI(title="Toolmarket Admin Gateway")
+
+# Setup Prometheus metrics before mounting static files
+Instrumentator().instrument(app).expose(app)
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
