@@ -1,6 +1,6 @@
 services:
   employee-gateway:
-    image: ${DOCKERHUB_USERNAME}/toolmarket-employee-gateway:latest
+    build: ./employee-gateway
     networks:
       - gateway
       - internal
@@ -8,7 +8,7 @@ services:
     depends_on: [api]
 
   user-gateway:
-    image: ${DOCKERHUB_USERNAME}/toolmarket-user-gateway:latest
+    build: ./user-gateway
     networks:
       - gateway
       - internal
@@ -32,7 +32,7 @@ services:
     depends_on: [employee-gateway, user-gateway, grafana, prometheus]
 
   db:
-    image: ${DOCKERHUB_USERNAME}/toolmarket-db:latest
+    build: ./db
     networks:
       - internal
     env_file: .env
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ${DOCKERHUB_USERNAME}/toolmarket-api:latest
+    build: ./api
     networks:
       - internal
       - gateway

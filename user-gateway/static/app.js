@@ -194,6 +194,16 @@ function clearMessage(target) {
   target.textContent = "";
 }
 
+function switchToLogin() {
+  elements.loginForm.hidden = false;
+  elements.registerForm.hidden = true;
+}
+
+function switchToRegister() {
+  elements.loginForm.hidden = true;
+  elements.registerForm.hidden = false;
+}
+
 function setActiveTab(tabName) {
   elements.tabPanels.forEach((panel) => {
     panel.hidden = panel.id !== `${tabName}Tab`;
