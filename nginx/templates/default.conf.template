@@ -1,0 +1,67 @@
+server {
+    listen 80;
+    server_name ${HOST_DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${HOST_DOMAIN};
+
+    ssl_certificate /etc/nginx/ssl/server.crt;
+    ssl_certificate_key /etc/nginx/ssl/server.key;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location = /test { return 301 /test/; }
+    location /test/ {
+        default_type text/plain;
+        return 200 "Hello from Nginx!\nWorks fine!\nHost: ${HOST_DOMAIN}\n";
+    }
+
+    location /employee/ {
+        proxy_pass http://employee-gateway:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location = / { return 301 /market/; }
+
+    location /market/ {
+        proxy_pass http://user-gateway:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location = /grafana { return 301 /grafana/; }
+
+    location ^~ /grafana/ {
+        proxy_pass http://grafana:3000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+    }
+
+    #     location = /prometheus { return 301 /prometheus/; }
+
+    #     location ^~ /prometheus/ {
+    #         proxy_pass http://prometheus:9090/;
+    #         proxy_set_header Host $host;
+    #         proxy_set_header X-Real-IP $remote_addr;
+    #         proxy_set_header X-Forwarded-Proto $scheme;
+    #         proxy_set_header X-Forwarded-Host $host;
+    #         proxy_set_header X-Forwarded-Prefix /prometheus;
+    #     }
+
+    location /assets/ {
+        alias /assets/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        autoindex off;
+    }
+}
